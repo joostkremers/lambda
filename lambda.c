@@ -1276,7 +1276,7 @@ int main(int argc, char** argv) {
       if (mpc_parse("<stdin>", input, Lambda, &r)) {
 
         /* Print the AST if needed */
-        mpc_ast_print(r.output);
+        /* mpc_ast_print(r.output); */
 
         /* Evaluate the AST and print the result */
         lval* result = lval_eval(e, lval_read(r.output));
