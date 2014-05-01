@@ -1268,7 +1268,7 @@ int main(int argc, char** argv) {
 
     while (1) {
 
-      char* input = readline("Lambda> ");
+      char* input = readline("lambda> ");
       add_history(input);
 
       /* Attempt to parse the user input */
