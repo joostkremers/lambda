@@ -1266,6 +1266,8 @@ int main(int argc, char** argv) {
       lval_del(x);
     } else { puts("Warning: Could not load prelude"); }
 
+    putchar('\n');
+
     while (1) {
 
       char* input = readline("lambda> ");
