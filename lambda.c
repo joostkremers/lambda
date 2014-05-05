@@ -899,6 +899,10 @@ lval* builtin_var(lenv* e, lval* a, char* func) {
   LASSERT(a, (syms->count == a->count-1), "def: incorrect number of values to symbols");
 
   for (int i = 0; i < syms->count; i++) {
+
+    /* Debugging */
+    printf("builtin_var: value %i: ", i+1); lval_println(a->cell[i+1]);
+
     if (strcmp(func, "def") == 0) { lenv_def(e, syms->cell[i], a->cell[i+1]); }
     if (strcmp(func, "set") == 0) { lenv_put(e, syms->cell[i], a->cell[i+1]); }
   }
