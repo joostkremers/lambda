@@ -37,8 +37,8 @@
 ;;; Functional Functions
 
 ;; Function Definitions
-(def '(fn) (\ '(f b)
-            '(def (head f) (\ (tail f) b))))
+(def '(fn) (^ (f b)
+              (def (head f) (\ (tail f) b))))
 
 ;; Open new scope
 (fn '(let b)
