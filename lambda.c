@@ -1186,7 +1186,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
   if (v->count == 0) { return v; }
 
   /* Single expression */
-  if (v->count == 1) { return lval_eval(e, lval_take(v, 0)); }
+  if (v->count == 1) { return lval_take(v, 0); }
 
   /* See if first element is a function after evaluation */
   lval* f = lval_pop(v, 0);
