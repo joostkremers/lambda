@@ -1327,7 +1327,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
 
   /* Error checking */
   for (int i = 0; i < v->count; i++) {
-    if (v->cell[i]->type == LVAL_ERR) { eval_level--; return lval_take(v, i); }
+    if (v->cell[i]->type == LVAL_ERR) { return lval_take(v, i); }
   }
 
   /* Empty expressions */
