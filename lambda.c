@@ -77,6 +77,9 @@
     return err;                                                         \
   }
 
+/* Debugging */
+int eval_level = 0;
+
 /* Forward declarations */
 
 /* Parsers */
@@ -422,76 +425,87 @@ lval* lval_read(mpc_ast_t* t) {
   return x;
 }
 
-/* Print lval */
-void lval_print(lval* v);
+/* Print lval to file descripton */
+void lval_fprint(FILE* stream, lval* v);
 
-void lval_print_fn(lval* v) {
+void lval_fprint_fn(FILE* stream, lval* v) {
   /* Print the code of a user function/macro */
   /* This is for use in builtin_print */
   if (v->builtin) {
-    printf("<builtin %s at %p>", (v->type == LVAL_FUN ? "function" : "macro"), (void*)v);
+    fprintf(stream, "<builtin %s at %p>", (v->type == LVAL_FUN ? "function" : "macro"), (void*)v);
   } else {
-    printf("(%s ", v->type == LVAL_FUN ? "\\" : "^"); lval_print(v->formals); putchar(' '); lval_print(v->body); putchar(')');
+    fprintf(stream, "(%s ", v->type == LVAL_FUN ? "\\" : "^");
+    lval_fprint(stream, v->formals);
+    fprintf(stream, " ");
+    lval_fprint(stream, v->body);
+    fprintf(stream, ")");
   }
 }
 
-void lval_print_expr(lval* v, lval_t type) {
-  if (type == LVAL_QEXPR) { putchar('\''); }
+void lval_fprint_expr(FILE* stream, lval* v, lval_t type) {
+  if (type == LVAL_QEXPR) { fprintf(stream, "'"); }
 
-  putchar('(');
+  fprintf(stream, "(");
 
   for (int i = 0; i < v->count; i++) {
 
     /* Print Value contained within */
-    lval_print(v->cell[i]);
+    lval_fprint(stream, v->cell[i]);
 
     /* Don't print trailing space if last element */
     if (i != (v->count-1)) {
-      putchar(' ');
+      fprintf(stream, " ");
     }
   }
-  putchar(')');
+  fprintf(stream, ")");
 }
 
-void lval_print_str(lval* v) {
+void lval_fprint_str(FILE* stream, lval* v) {
   /* Make a copy of the string */
   char* escaped = malloc(strlen(v->str) + 1);
   strcpy(escaped, v->str);
   /* Pass it through the escape function */
   escaped = mpcf_escape(escaped);
   /* Print it between " characters */
-  printf("\"%s\"", escaped);
+  fprintf(stream, "\"%s\"", escaped);
   /* free the copied string */
   free(escaped);
 }
 
-void lval_print(lval* v) {
+void lval_fprint(FILE* stream, lval* v) {
   switch (v->type) {
-  case LVAL_NUM: printf("%g", v->num); break;
-  case LVAL_ERR: printf("Error: %s", v->err); break;
-  case LVAL_BOOL: printf("%s", v->boolean ? "true" : "false"); break;
-  case LVAL_SYM: printf("%s", v->sym); break;
-  case LVAL_STR: lval_print_str(v); break;
+  case LVAL_NUM: fprintf(stream, "%g", v->num); break;
+  case LVAL_ERR: fprintf(stream, "Error: %s", v->err); break;
+  case LVAL_BOOL: fprintf(stream, "%s", v->boolean ? "true" : "false"); break;
+  case LVAL_SYM: fprintf(stream, "%s", v->sym); break;
+  case LVAL_STR: lval_fprint_str(stream, v); break;
   case LVAL_FUN:
     if (v->builtin) {
-      printf("<builtin function at %p>", (void*)v);
+      fprintf(stream, "<builtin function at %p>", (void*)v);
     } else {
-      printf("<user defined function at %p>", (void*)v);
+      fprintf(stream, "<user defined function at %p>", (void*)v);
     }
     break;
   case LVAL_MAC:
     if (v->builtin) {
-      printf("<builtin macro at %p>", (void*)v);
+      fprintf(stream, "<builtin macro at %p>", (void*)v);
     } else {
-      printf("<user defined macro at %p>", (void*)v);
+      fprintf(stream, "<user defined macro at %p>", (void*)v);
     }
     break;
-  case LVAL_SEXPR: lval_print_expr(v, LVAL_SEXPR); break;
-  case LVAL_QEXPR: lval_print_expr(v, LVAL_QEXPR); break;
+  case LVAL_SEXPR: lval_fprint_expr(stream, v, LVAL_SEXPR); break;
+  case LVAL_QEXPR: lval_fprint_expr(stream, v, LVAL_QEXPR); break;
   }
 }
 
-void lval_println(lval* v) { lval_print(v); putchar('\n'); }
+void lval_fprintln(FILE* stream, lval* v) { lval_fprint(stream, v); fprintf(stream, "\n"); }
+
+/* Print lval to stdout */
+void lval_print_fn(lval* v) { lval_fprint_fn(stdout, v); }
+void lval_print_expr(lval* v, lval_t type) { lval_fprint_expr(stdout, v, type); }
+void lval_print_str(lval* v) { lval_fprint_str(stdout, v); }
+void lval_print(lval* v) { lval_fprint(stdout, v); }
+void lval_println(lval* v) { lval_fprintln(stdout, v); }
 
 /* Environment struct */
 struct lenv {
@@ -901,7 +915,7 @@ lval* builtin_var(lenv* e, lval* a, char* func) {
   for (int i = 0; i < syms->count; i++) {
 
     /* Debugging */
-    printf("builtin_var: value %i: ", i+1); lval_println(a->cell[i+1]);
+    /* fprintf(stderr, "builtin_var: value %i: ", i+1); lval_fprintln(stderr, a->cell[i+1]); */
 
     if (strcmp(func, "def") == 0) { lenv_def(e, syms->cell[i], a->cell[i+1]); }
     if (strcmp(func, "set") == 0) { lenv_put(e, syms->cell[i], a->cell[i+1]); }
@@ -1279,7 +1293,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
 
   /* Error checking */
   for (int i = 0; i < v->count; i++) {
-    if (v->cell[i]->type == LVAL_ERR) { return lval_take(v, i); }
+    if (v->cell[i]->type == LVAL_ERR) { eval_level--; return lval_take(v, i); }
   }
 
   /* Empty expressions */
@@ -1307,16 +1321,36 @@ lval* lval_eval_qexpr(lenv* e, lval* v) {
 }
 
 lval* lval_eval(lenv* e, lval* v) {
+  /* Debugging */
+  fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Evaluating: "); lval_fprintln(stderr, v);
+  eval_level++;
+
   /* Symbols an Sexpressions are treated separately */
   if (v->type == LVAL_SYM) {
-    lval* x = lenv_get(e, v);
+    lval* result = lenv_get(e, v);
     lval_del(v);
-    return x;
+
+    /* Debugging */
+    eval_level--;
+    fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+
+    return result;
   }
 
-  if (v->type == LVAL_SEXPR) { return lval_eval_sexpr(e, v); }
+  if (v->type == LVAL_SEXPR) {
+    lval* result = lval_eval_sexpr(e, v);
+
+    /* Debugging */
+    eval_level--;
+    fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+
+    return result; }
 
   /* All other lval types remain the same */
+
+  /* Debugging */
+  eval_level--;
+  fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, v);
   return v;
 }
 
@@ -1377,6 +1411,9 @@ int main(int argc, char** argv) {
 
       char* input = readline("lambda> ");
       add_history(input);
+
+      /* Debugging */
+      fprintf(stderr, "Input: %s\n", input);
 
       /* Attempt to parse the user input */
       mpc_result_t r;
