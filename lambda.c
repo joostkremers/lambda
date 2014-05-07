@@ -72,10 +72,13 @@
 
 #define LASSERT_TYPE(fn, args, n, expt)                                 \
   if (args->cell[n]->type != expt) {                                    \
-    lval* err = lval_err("%s: Wrong type argument. Argument %i is of type %s, expected %s", fn, n, ltype_name(args->cell[n]->type), ltype_name(expt)); \
+    lval* err = lval_err("%s: Wrong type argument. Got %s, expected %s", fn, ltype_name(args->cell[n]->type), ltype_name(expt)); \
     lval_del(args);                                                     \
     return err;                                                         \
   }
+
+/* Debugging */
+int eval_level = 0;
 
 /* Forward declarations */
 
@@ -101,11 +104,13 @@ lenv* lenv_copy(lenv* e);
 void lenv_del(lenv* e);
 
 /* Lisp Value */
-typedef enum { LVAL_ERR, LVAL_NUM, LVAL_BOOL, LVAL_SYM, LVAL_STR, LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR } lval_t;
+typedef enum { LVAL_ERR, LVAL_NUM, LVAL_BOOL, LVAL_SYM, LVAL_STR, LVAL_FUN, LVAL_MAC, LVAL_SEXPR, LVAL_QEXPR } lval_t;
+/*                 0         1         2          3         4         5         6         7           8       */
 
 char* ltype_name(int t) {
   switch(t) {
   case LVAL_FUN: return "Function";
+  case LVAL_MAC: return "Macro";
   case LVAL_NUM: return "Number";
   case LVAL_STR: return "String";
   case LVAL_BOOL: return "Boolean";
@@ -194,9 +199,9 @@ lval* lval_sym(char* s) {
   return v;
 }
 
-lval* lval_fun(lbuiltin func) {
+lval* lval_fun(lbuiltin func, lval_t type) {
   lval* v = malloc(sizeof(lval));
-  v->type = LVAL_FUN;
+  v->type = type;
   v->builtin = func;
   return v;
 }
@@ -204,6 +209,22 @@ lval* lval_fun(lbuiltin func) {
 lval* lval_lambda(lval* formals, lval* body) {
   lval* v = malloc(sizeof(lval));
   v-> type = LVAL_FUN;
+
+  /* Set builtin to NULL */
+  v->builtin = NULL;
+
+  /* Build new environment */
+  v->env = lenv_new();
+
+  /* Set formals and body */
+  v->formals = formals;
+  v->body = body;
+  return v;
+}
+
+lval* lval_macro(lval* formals, lval* body) {
+  lval* v = malloc(sizeof(lval));
+  v-> type = LVAL_MAC;
 
   /* Set builtin to NULL */
   v->builtin = NULL;
@@ -245,6 +266,7 @@ lval* lval_copy(lval* v) {
   case LVAL_BOOL: x->boolean = v->boolean; break;
 
   case LVAL_FUN:
+  case LVAL_MAC:
     if(v->builtin) {
       x->builtin = v->builtin;
     } else {
@@ -282,6 +304,7 @@ void lval_del(lval* v) {
   case LVAL_BOOL: break;
 
   case LVAL_FUN:
+  case LVAL_MAC:
     if (!v->builtin) {
       lenv_del(v->env);
       lval_del(v->formals);
@@ -322,6 +345,7 @@ bool lval_equal(lval* x, lval* y) {
 
     /* If Builtins compare functions, otherwise compare formals and body */
   case LVAL_FUN:
+  case LVAL_MAC:
     if (x->builtin || y->builtin) {
       return (x->builtin == y->builtin ? true : false);
     } else {
@@ -402,69 +426,87 @@ lval* lval_read(mpc_ast_t* t) {
   return x;
 }
 
-/* Print lval */
-void lval_print(lval* v);
+/* Print lval to file descripton */
+void lval_fprint(FILE* stream, lval* v);
 
-void lval_print_fn(lval* v) {
-  /* Print the code of a user function */
+void lval_fprint_fn(FILE* stream, lval* v) {
+  /* Print the code of a user function/macro */
   /* This is for use in builtin_print */
   if (v->builtin) {
-    printf("<builtin function at %p>", (void*)v);
+    fprintf(stream, "<builtin %s at %p>", (v->type == LVAL_FUN ? "function" : "macro"), (void*)v);
   } else {
-    printf("(\\ "); lval_print(v->formals); putchar(' '); lval_print(v->body); putchar(')');
+    fprintf(stream, "(%s ", v->type == LVAL_FUN ? "\\" : "^");
+    lval_fprint(stream, v->formals);
+    fprintf(stream, " ");
+    lval_fprint(stream, v->body);
+    fprintf(stream, ")");
   }
 }
 
-void lval_print_expr(lval* v, lval_t type) {
-  if (type == LVAL_QEXPR) { putchar('\''); }
+void lval_fprint_expr(FILE* stream, lval* v, lval_t type) {
+  if (type == LVAL_QEXPR) { fprintf(stream, "'"); }
 
-  putchar('(');
+  fprintf(stream, "(");
 
   for (int i = 0; i < v->count; i++) {
 
     /* Print Value contained within */
-    lval_print(v->cell[i]);
+    lval_fprint(stream, v->cell[i]);
 
     /* Don't print trailing space if last element */
     if (i != (v->count-1)) {
-      putchar(' ');
+      fprintf(stream, " ");
     }
   }
-  putchar(')');
+  fprintf(stream, ")");
 }
 
-void lval_print_str(lval* v) {
+void lval_fprint_str(FILE* stream, lval* v) {
   /* Make a copy of the string */
   char* escaped = malloc(strlen(v->str) + 1);
   strcpy(escaped, v->str);
   /* Pass it through the escape function */
   escaped = mpcf_escape(escaped);
   /* Print it between " characters */
-  printf("\"%s\"", escaped);
+  fprintf(stream, "\"%s\"", escaped);
   /* free the copied string */
   free(escaped);
 }
 
-void lval_print(lval* v) {
+void lval_fprint(FILE* stream, lval* v) {
   switch (v->type) {
-  case LVAL_NUM: printf("%g", v->num); break;
-  case LVAL_ERR: printf("Error: %s", v->err); break;
-  case LVAL_BOOL: printf("%s", v->boolean ? "true" : "false"); break;
-  case LVAL_SYM: printf("%s", v->sym); break;
-  case LVAL_STR: lval_print_str(v); break;
+  case LVAL_NUM: fprintf(stream, "%g", v->num); break;
+  case LVAL_ERR: fprintf(stream, "Error: %s", v->err); break;
+  case LVAL_BOOL: fprintf(stream, "%s", v->boolean ? "true" : "false"); break;
+  case LVAL_SYM: fprintf(stream, "%s", v->sym); break;
+  case LVAL_STR: lval_fprint_str(stream, v); break;
   case LVAL_FUN:
     if (v->builtin) {
-      printf("<builtin function at %p>", (void*)v);
+      fprintf(stream, "<builtin function at %p>", (void*)v);
     } else {
-      printf("<user defined function at %p>", (void*)v);
+      fprintf(stream, "<user defined function at %p>", (void*)v);
     }
     break;
-  case LVAL_SEXPR: lval_print_expr(v, LVAL_SEXPR); break;
-  case LVAL_QEXPR: lval_print_expr(v, LVAL_QEXPR); break;
+  case LVAL_MAC:
+    if (v->builtin) {
+      fprintf(stream, "<builtin macro at %p>", (void*)v);
+    } else {
+      fprintf(stream, "<user defined macro at %p>", (void*)v);
+    }
+    break;
+  case LVAL_SEXPR: lval_fprint_expr(stream, v, LVAL_SEXPR); break;
+  case LVAL_QEXPR: lval_fprint_expr(stream, v, LVAL_QEXPR); break;
   }
 }
 
-void lval_println(lval* v) { lval_print(v); putchar('\n'); }
+void lval_fprintln(FILE* stream, lval* v) { lval_fprint(stream, v); fprintf(stream, "\n"); }
+
+/* Print lval to stdout */
+void lval_print_fn(lval* v) { lval_fprint_fn(stdout, v); }
+void lval_print_expr(lval* v, lval_t type) { lval_fprint_expr(stdout, v, type); }
+void lval_print_str(lval* v) { lval_fprint_str(stdout, v); }
+void lval_print(lval* v) { lval_fprint(stdout, v); }
+void lval_println(lval* v) { lval_fprintln(stdout, v); }
 
 /* Environment struct */
 struct lenv {
@@ -554,6 +596,7 @@ lenv* lenv_copy(lenv* e) {
 /* Evaluation */
 
 lval* lval_eval(lenv* e, lval* v);
+lval* lval_eval_qexpr(lenv* e, lval* v);
 
 lval* lval_pop(lval* v, int i) {
   /* Find the item at i */
@@ -611,7 +654,7 @@ lval* builtin_op(lenv* e, lval* a, char* op) {
     if (strcmp(op, "+") == 0) { x->num += y->num; }
     if (strcmp(op, "-") == 0) { x->num -= y->num; }
     if (strcmp(op, "*") == 0) { x->num *= y->num; }
-    if (strcmp(op, "^") == 0) { x->num = pow(x->num, y->num); }
+    if (strcmp(op, "pow") == 0) { x->num = pow(x->num, y->num); }
     if (strcmp(op, "/") == 0) {
       if (y->num == 0) {
         lval_del(x); lval_del(y);
@@ -619,7 +662,7 @@ lval* builtin_op(lenv* e, lval* a, char* op) {
       }
       x->num /= y->num;
     }
-    if (strcmp(op, "%") == 0) {
+    if (strcmp(op, "mod") == 0) {
       if (y->num == 0) {
         lval_del(x); lval_del(y);
         x = lval_err("Division by zero"); break;
@@ -682,36 +725,53 @@ lval* builtin_equal(lenv* e, lval* a) {
 }
 
 lval* builtin_if(lenv* e, lval* a) {
+  /* Type: macro */
+  /* Format: if <bool> <then> (<else>) */
+  /* Description: conditional evaluation */
+
   LASSERT_VAR_NARGS("if", a, 2, 3);
-  LASSERT_TYPE("if", a, 0, LVAL_BOOL);
 
-  /* Mark both expressions as evaluable if they are Q-Expressions */
-  if (a->cell[1]->type == LVAL_QEXPR) { a->cell[1]->type = LVAL_SEXPR; }
-  if (a->count == 3 && a->cell[2]->type == LVAL_QEXPR) { a->cell[2]->type = LVAL_SEXPR; }
+  lval *result;
 
-  lval *r;
+  /* Evaluate first argument and make sure it's a boolean */
+  a->cell[0] = lval_eval_qexpr(e, a->cell[0]);
+  if (a->cell[0]->type == LVAL_ERR) { return lval_take(a, 0); }
 
   if (a->cell[0]->boolean) {
-    r = lval_eval(e, lval_pop(a, 1));
+    result = lval_eval_qexpr(e, lval_pop(a, 1));
   } else {
     if (a->count == 3) {
-      r = lval_eval(e, lval_pop(a, 2));
+      result = lval_eval_qexpr(e, lval_pop(a, 2));
     } else {
-      r = lval_bool(false);
+      result = lval_bool(false);
     }
   }
 
   lval_del(a);
-  return r;
+  return result;
 }
 
 lval* builtin_and(lenv* e, lval* a) {
-  /* Error checking is done in a separate loop, so that we check *all* argument types */
-  for (int i = 0; i < a->count; i++) { LASSERT_TYPE("and", a, i, LVAL_BOOL); }
+  /* Type: macro */
+  /* Format: and <bool> & <bools> */
+  /* Description: logical 'and' */
 
-  /* Now check each argument again and return if we find a false */
-  for (int i = 0; i < a->count; i++) {
-    if (a->cell[i]->boolean == false) { lval_del(a); return lval_bool(false); }
+  lval* result;
+
+  /* Check each argument in turn and if a false is found, return it. */
+  while(a->count) {
+    lval* arg = lval_pop(a, 0);
+
+    result = lval_eval_qexpr(e, arg);
+    if (result->type != LVAL_BOOL) {
+      lval* err = lval_err("and: Wrong type argument. Got %s, expected boolean", result->type);
+      lval_del(a); lval_del(result);
+      return err;
+    }
+    if (result->boolean == false) { lval_del(a); return result; }
+
+    /* Delete the result of evaluating the current argument */
+    lval_del(result);
   }
 
   /* Otherwise return true */
@@ -720,11 +780,26 @@ lval* builtin_and(lenv* e, lval* a) {
 }
 
 lval* builtin_or(lenv* e, lval* a) {
-  for (int i = 0; i < a->count; i++) { LASSERT_TYPE("or", a, i, LVAL_BOOL); }
+  /* Type: macro */
+  /* Format: or <bool> & <bools> */
+  /* Description: logical 'or' */
 
-  /* Now check each argument again and return if we find a true */
-  for (int i = 0; i < a->count; i++) {
-    if (a->cell[i]->boolean == true) { lval_del(a); return lval_bool(true); }
+  lval* result;
+
+  /* Check each argument in turn and if a true is found, return it. */
+  while(a->count) {
+    lval* arg = lval_pop(a, 0);
+
+    result = lval_eval_qexpr(e, arg);
+    if (result->type != LVAL_BOOL) {
+      lval* err = lval_err("or: Wrong type argument. Got %s, expected boolean", result->type);
+      lval_del(a); lval_del(result);
+      return err;
+    }
+    if (result->boolean == true) { lval_del(a); return result; }
+
+    /* Delete the result of evaluating the current argument */
+    lval_del(result);
   }
 
   /* Otherwise return false */
@@ -733,6 +808,10 @@ lval* builtin_or(lenv* e, lval* a) {
 }
 
 lval* builtin_not(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: not <bool> */
+  /* Description: logical 'not' */
+
   LASSERT_NARGS("not", a, 1);
   LASSERT_TYPE("not", a, 0, LVAL_BOOL);
   lval* r = lval_take(a, 0);
@@ -741,6 +820,11 @@ lval* builtin_not(lenv* e, lval* a) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: head <qexpr> */
+  /* Description: return the first element of <qexpr> as a Q-expression */
+  /* Example: head '(1 2 3 4) ==> '(1) */
+
   LASSERT_NELIST("head", a);
   LASSERT_NARGS("head", a, 1);
   LASSERT_TYPE("head", a, 0, LVAL_QEXPR);
@@ -751,6 +835,11 @@ lval* builtin_head(lenv* e, lval* a) {
 }
 
 lval* builtin_tail(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: tail <qexpr> */
+  /* Description: return <qexpr> without its first element */
+  /* Example: tail '(1 2 3 4) ==> '(2 3 4) */
+
   LASSERT_NELIST("tail", a);
   LASSERT_NARGS("tail", a, 1);
   LASSERT_TYPE("tail", a, 0, LVAL_QEXPR);
@@ -761,6 +850,11 @@ lval* builtin_tail(lenv* e, lval* a) {
 }
 
 lval* builtin_init(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: init <qexpr> */
+  /* Description: return <qexpr> without its last element */
+  /* Example: init '(1 2 3 4) ==> '(1 2 3) */
+
   LASSERT_NELIST("init", a);
   LASSERT_NARGS("init", a, 1);
   LASSERT_TYPE("init", a, 0, LVAL_QEXPR);
@@ -768,16 +862,25 @@ lval* builtin_init(lenv* e, lval* a) {
   lval* v = lval_take(a, 0);
   lval_del(lval_pop(v, v->count-1));
 
-  lval_del(a);
   return v;
 }
 
 lval* builtin_list(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: list & <expr>* */
+  /* Description: return <expr>* as a list */
+  /* Example: list 1 2 3 4 ==> '(1 2 3 4) */
+
   a->type = LVAL_QEXPR;
   return a;
 }
 
 lval* builtin_eval(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: eval <qexpr> */
+  /* Description: return the result of evaluating <qexpr> */
+  /* Example: eval '(+ 2 3) ==> 5 */
+
   LASSERT_NARGS("eval", a, 1);
 
   lval* x = lval_take(a, 0);
@@ -842,6 +945,10 @@ lval* builtin_var(lenv* e, lval* a, char* func) {
   LASSERT(a, (syms->count == a->count-1), "def: incorrect number of values to symbols");
 
   for (int i = 0; i < syms->count; i++) {
+
+    /* Debugging */
+    /* fprintf(stderr, "builtin_var: value %i: ", i+1); lval_fprintln(stderr, a->cell[i+1]); */
+
     if (strcmp(func, "def") == 0) { lenv_def(e, syms->cell[i], a->cell[i+1]); }
     if (strcmp(func, "set") == 0) { lenv_put(e, syms->cell[i], a->cell[i+1]); }
   }
@@ -870,6 +977,25 @@ lval* builtin_lambda(lenv* e, lval* a) {
   lval_del(a);
 
   return lval_lambda(formals, body);
+}
+
+lval* builtin_macro(lenv* e, lval* a) {
+  LASSERT_NARGS("\\", a, 2);
+  LASSERT_TYPE("\\", a, 0, LVAL_QEXPR);
+  LASSERT_TYPE("\\", a, 1, LVAL_QEXPR);
+
+  /* Check if first Q-Expr contains only symbols */
+  for (int i = 0; i < a->cell[0]->count; i++) {
+    LASSERT(a, (a->cell[0]->cell[i]->type == LVAL_SYM),
+            "Cannot define %s", ltype_name(a->cell[0]->cell[i]->type));
+  }
+
+  /* Pop both arguments and pass them to lval_macro */
+  lval* formals = lval_pop(a, 0);
+  lval* body = lval_pop(a, 0);
+  lval_del(a);
+
+  return lval_macro(formals, body);
 }
 
 lval* builtin_load(lenv* e, lval* a) {
@@ -930,7 +1056,7 @@ lval* builtin_print(lenv* e, lval* a) {
 
   /* Print each argument followed by a space */
   for (int i = 0; i < a->count; i++) {
-    if (a->cell[i]->type == LVAL_FUN) { lval_print_fn(a->cell[i]); }
+    if (a->cell[i]->type == LVAL_FUN || a->cell[i]->type == LVAL_MAC) { lval_print_fn(a->cell[i]); }
     else { lval_print(a->cell[i]); }
     putchar(' ');
   }
@@ -1018,8 +1144,8 @@ lval* builtin_add(lenv* e, lval* a) { return builtin_op(e, a, "+"); }
 lval* builtin_sub(lenv* e, lval* a) { return builtin_op(e, a, "-"); }
 lval* builtin_mul(lenv* e, lval* a) { return builtin_op(e, a, "*"); }
 lval* builtin_div(lenv* e, lval* a) { return builtin_op(e, a, "/"); }
-lval* builtin_pow(lenv* e, lval* a) { return builtin_op(e, a, "^"); }
-lval* builtin_mod(lenv* e, lval* a) { return builtin_op(e, a, "%"); }
+lval* builtin_pow(lenv* e, lval* a) { return builtin_op(e, a, "pow"); }
+lval* builtin_mod(lenv* e, lval* a) { return builtin_op(e, a, "mod"); }
 
 lval* builtin_eq(lenv* e, lval* a) { return builtin_comp(e, a, "="); }
 lval* builtin_nq(lenv* e, lval* a) { return builtin_comp(e, a, "/="); }
@@ -1030,7 +1156,14 @@ lval* builtin_ge(lenv* e, lval* a) { return builtin_comp(e, a, ">="); }
 
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
   lval* k = lval_sym(name);
-  lval* v = lval_fun(func);
+  lval* v = lval_fun(func, LVAL_FUN);
+  lenv_put(e, k, v);
+  lval_del(k); lval_del(v);
+}
+
+void lenv_add_builtin_mac(lenv* e, char* name, lbuiltin mac) {
+  lval* k = lval_sym(name);
+  lval* v = lval_fun(mac, LVAL_MAC);
   lenv_put(e, k, v);
   lval_del(k); lval_del(v);
 }
@@ -1053,6 +1186,7 @@ void lenv_add_builtins(lenv* e) {
 
   /* General functions */
   lenv_add_builtin(e, "\\", builtin_lambda);
+  lenv_add_builtin(e, "^", builtin_macro);
   lenv_add_builtin(e, "exit", builtin_exit);
   lenv_add_builtin(e, "typeof", builtin_typeof);
   lenv_add_builtin(e, "load", builtin_load);
@@ -1067,11 +1201,11 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "-", builtin_sub);
   lenv_add_builtin(e, "*", builtin_mul);
   lenv_add_builtin(e, "/", builtin_div);
-  lenv_add_builtin(e, "^", builtin_pow);
-  lenv_add_builtin(e, "%", builtin_mod);
+  lenv_add_builtin(e, "pow", builtin_pow);
+  lenv_add_builtin(e, "mod", builtin_mod);
 
   /* Comparison functions */
-  lenv_add_builtin(e, "if", builtin_if);
+  lenv_add_builtin_mac(e, "if", builtin_if);
   lenv_add_builtin(e, "=", builtin_eq);
   lenv_add_builtin(e, "/=", builtin_nq);
   lenv_add_builtin(e, "<", builtin_lt);
@@ -1081,8 +1215,8 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "equal", builtin_equal);
 
   /* Logical functions */
-  lenv_add_builtin(e, "and", builtin_and);
-  lenv_add_builtin(e, "or", builtin_or);
+  lenv_add_builtin_mac(e, "and", builtin_and);
+  lenv_add_builtin_mac(e, "or", builtin_or);
   lenv_add_builtin(e, "not", builtin_not);
 }
 
@@ -1172,14 +1306,28 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {
 
-  /* Evaluate children */
-  for (int i = 0; i < v->count; i++) {
+  /* Evaluate first child and check if result is a macro */
+  v->cell[0] = lval_eval(e, v->cell[0]);
+
+  if (v->cell[0]->type == LVAL_MAC) {
+    /* Convert all arguments into Q-expressions */
+    for (int i = 1; i < v->count; i++) {
+      switch (v->cell[i]->type) {
+      case LVAL_QEXPR: break;
+      case LVAL_SEXPR: v->cell[i]->type = LVAL_QEXPR; break;
+      default: v->cell[i] = lval_add(lval_qexpr(), v->cell[i]);
+      }
+    }
+  }
+
+  /* Evaluate other children */
+  for (int i = 1; i < v->count; i++) {
     v->cell[i] = lval_eval(e, v->cell[i]);
   }
 
   /* Error checking */
   for (int i = 0; i < v->count; i++) {
-    if (v->cell[i]->type == LVAL_ERR) { return lval_take(v, i); }
+    if (v->cell[i]->type == LVAL_ERR) { eval_level--; return lval_take(v, i); }
   }
 
   /* Empty expressions */
@@ -1190,7 +1338,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
 
   /* See if first element is a function after evaluation */
   lval* f = lval_pop(v, 0);
-  if (f->type != LVAL_FUN) {
+  if (f->type != LVAL_FUN && f->type != LVAL_MAC) {
     lval* err = lval_err("Not a function. Got type %s instead", ltype_name(f->type));
     lval_del(f); lval_del(v);
     return err;
@@ -1198,20 +1346,46 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
 
   lval* result = lval_call(e, f, v);
   lval_del(f);
+
   return result;
 }
 
+lval* lval_eval_qexpr(lenv* e, lval* v) {
+  v->type = LVAL_SEXPR;
+  return lval_eval(e, v);
+}
+
 lval* lval_eval(lenv* e, lval* v) {
+  /* Debugging */
+  fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Evaluating: "); lval_fprintln(stderr, v);
+  eval_level++;
+
   /* Symbols an Sexpressions are treated separately */
   if (v->type == LVAL_SYM) {
-    lval* x = lenv_get(e, v);
+    lval* result = lenv_get(e, v);
     lval_del(v);
-    return x;
+
+    /* Debugging */
+    eval_level--;
+    fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+
+    return result;
   }
 
-  if (v->type == LVAL_SEXPR) { return lval_eval_sexpr(e, v); }
+  if (v->type == LVAL_SEXPR) {
+    lval* result = lval_eval_sexpr(e, v);
+
+    /* Debugging */
+    eval_level--;
+    fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+
+    return result; }
 
   /* All other lval types remain the same */
+
+  /* Debugging */
+  eval_level--;
+  fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, v);
   return v;
 }
 
@@ -1272,6 +1446,9 @@ int main(int argc, char** argv) {
 
       char* input = readline("lambda> ");
       add_history(input);
+
+      /* Debugging */
+      fprintf(stderr, "Input: %s\n", input);
 
       /* Attempt to parse the user input */
       mpc_result_t r;
