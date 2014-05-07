@@ -105,6 +105,7 @@ void lenv_del(lenv* e);
 
 /* Lisp Value */
 typedef enum { LVAL_ERR, LVAL_NUM, LVAL_BOOL, LVAL_SYM, LVAL_STR, LVAL_FUN, LVAL_MAC, LVAL_SEXPR, LVAL_QEXPR } lval_t;
+/*                 0         1         2          3         4         5         6         7           8       */
 
 char* ltype_name(int t) {
   switch(t) {
@@ -724,32 +725,36 @@ lval* builtin_equal(lenv* e, lval* a) {
 }
 
 lval* builtin_if(lenv* e, lval* a) {
+  /* Type: macro */
+  /* Format: if <bool> <then> (<else>) */
+  /* Description: conditional evaluation */
+
   LASSERT_VAR_NARGS("if", a, 2, 3);
-  LASSERT_TYPE("if", a, 0, LVAL_BOOL);
 
-  /* Mark both expressions as evaluable if they are Q-Expressions */
-  if (a->cell[1]->type == LVAL_QEXPR) { a->cell[1]->type = LVAL_SEXPR; }
-  if (a->count == 3 && a->cell[2]->type == LVAL_QEXPR) { a->cell[2]->type = LVAL_SEXPR; }
+  lval *result;
 
-  lval *r;
+  /* Evaluate first argument and make sure it's a boolean */
+  a->cell[0] = lval_eval_qexpr(e, a->cell[0]);
+  if (a->cell[0]->type == LVAL_ERR) { return lval_take(a, 0); }
 
   if (a->cell[0]->boolean) {
-    r = lval_eval(e, lval_pop(a, 1));
+    result = lval_eval_qexpr(e, lval_pop(a, 1));
   } else {
     if (a->count == 3) {
-      r = lval_eval(e, lval_pop(a, 2));
+      result = lval_eval_qexpr(e, lval_pop(a, 2));
     } else {
-      r = lval_bool(false);
+      result = lval_bool(false);
     }
   }
 
   lval_del(a);
-  return r;
+  return result;
 }
 
 lval* builtin_and(lenv* e, lval* a) {
-  /* Logical 'and' */
-  /* 'and' is a macro */
+  /* Type: macro */
+  /* Format: and <bool> & <bools> */
+  /* Description: logical 'and' */
 
   lval* result;
 
@@ -770,14 +775,14 @@ lval* builtin_and(lenv* e, lval* a) {
   }
 
   /* Otherwise return true */
-  lval_del(result);
   lval_del(a);
   return lval_bool(true);
 }
 
 lval* builtin_or(lenv* e, lval* a) {
-  /* Logical 'or' */
-  /* 'or' is a macro */
+  /* Type: macro */
+  /* Format: or <bool> & <bools> */
+  /* Description: logical 'or' */
 
   lval* result;
 
@@ -798,12 +803,15 @@ lval* builtin_or(lenv* e, lval* a) {
   }
 
   /* Otherwise return false */
-  lval_del(result);
   lval_del(a);
   return lval_bool(false);
 }
 
 lval* builtin_not(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: not <bool> */
+  /* Description: logical 'not' */
+
   LASSERT_NARGS("not", a, 1);
   LASSERT_TYPE("not", a, 0, LVAL_BOOL);
   lval* r = lval_take(a, 0);
@@ -812,6 +820,11 @@ lval* builtin_not(lenv* e, lval* a) {
 }
 
 lval* builtin_head(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: head <qexpr> */
+  /* Description: return the first element of <qexpr> as a Q-expression */
+  /* Example: head '(1 2 3 4) ==> '(1) */
+
   LASSERT_NELIST("head", a);
   LASSERT_NARGS("head", a, 1);
   LASSERT_TYPE("head", a, 0, LVAL_QEXPR);
@@ -822,6 +835,11 @@ lval* builtin_head(lenv* e, lval* a) {
 }
 
 lval* builtin_tail(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: tail <qexpr> */
+  /* Description: return <qexpr> without its first element */
+  /* Example: tail '(1 2 3 4) ==> '(2 3 4) */
+
   LASSERT_NELIST("tail", a);
   LASSERT_NARGS("tail", a, 1);
   LASSERT_TYPE("tail", a, 0, LVAL_QEXPR);
@@ -832,6 +850,11 @@ lval* builtin_tail(lenv* e, lval* a) {
 }
 
 lval* builtin_init(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: init <qexpr> */
+  /* Description: return <qexpr> without its last element */
+  /* Example: init '(1 2 3 4) ==> '(1 2 3) */
+
   LASSERT_NELIST("init", a);
   LASSERT_NARGS("init", a, 1);
   LASSERT_TYPE("init", a, 0, LVAL_QEXPR);
@@ -839,16 +862,25 @@ lval* builtin_init(lenv* e, lval* a) {
   lval* v = lval_take(a, 0);
   lval_del(lval_pop(v, v->count-1));
 
-  lval_del(a);
   return v;
 }
 
 lval* builtin_list(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: list & <expr>* */
+  /* Description: return <expr>* as a list */
+  /* Example: list 1 2 3 4 ==> '(1 2 3 4) */
+
   a->type = LVAL_QEXPR;
   return a;
 }
 
 lval* builtin_eval(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: eval <qexpr> */
+  /* Description: return the result of evaluating <qexpr> */
+  /* Example: eval '(+ 2 3) ==> 5 */
+
   LASSERT_NARGS("eval", a, 1);
 
   lval* x = lval_take(a, 0);
@@ -958,7 +990,7 @@ lval* builtin_macro(lenv* e, lval* a) {
             "Cannot define %s", ltype_name(a->cell[0]->cell[i]->type));
   }
 
-  /* Pop both arguments and pass them to lval_lambda */
+  /* Pop both arguments and pass them to lval_macro */
   lval* formals = lval_pop(a, 0);
   lval* body = lval_pop(a, 0);
   lval_del(a);
@@ -1153,8 +1185,8 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "set", builtin_put);
 
   /* General functions */
-  lenv_add_builtin_mac(e, "\\", builtin_lambda);
-  lenv_add_builtin_mac(e, "^", builtin_macro);
+  lenv_add_builtin(e, "\\", builtin_lambda);
+  lenv_add_builtin(e, "^", builtin_macro);
   lenv_add_builtin(e, "exit", builtin_exit);
   lenv_add_builtin(e, "typeof", builtin_typeof);
   lenv_add_builtin(e, "load", builtin_load);
@@ -1274,15 +1306,17 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {
 
-  /* Debugging */
-  printf("Evaluating: "); lval_println(v);
-
   /* Evaluate first child and check if result is a macro */
   v->cell[0] = lval_eval(e, v->cell[0]);
+
   if (v->cell[0]->type == LVAL_MAC) {
-    /* Convert Sexpr into Qexpr */
-    for (int i = 1; i < v->count; i++) { 
-      if (v->cell[i]->type == LVAL_SEXPR) { v->cell[i]->type = LVAL_QEXPR; }
+    /* Convert all arguments into Q-expressions */
+    for (int i = 1; i < v->count; i++) {
+      switch (v->cell[i]->type) {
+      case LVAL_QEXPR: break;
+      case LVAL_SEXPR: v->cell[i]->type = LVAL_QEXPR; break;
+      default: v->cell[i] = lval_add(lval_qexpr(), v->cell[i]);
+      }
     }
   }
 
@@ -1312,6 +1346,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
 
   lval* result = lval_call(e, f, v);
   lval_del(f);
+
   return result;
 }
 
@@ -1395,7 +1430,7 @@ int main(int argc, char** argv) {
     puts("Lambda Version 0.1");
 
     /* Load standard prelude if it exists */
-    if( access( "prelude.lisp", R_OK ) != -1 ) {
+    if( access( "prelude.l", R_OK ) != -1 ) {
       /* Create an argument list with a single argument being the filename */
       lval* args = lval_add(lval_sexpr(), lval_str("prelude.l"));
       lval* x = builtin_load(e, args);
