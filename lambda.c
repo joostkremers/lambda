@@ -77,8 +77,9 @@
     return err;                                                         \
   }
 
-/* Debugging */
+#ifdef DEBUG
 int eval_level = 0;
+#endif
 
 /* Forward declarations */
 
@@ -946,9 +947,6 @@ lval* builtin_var(lenv* e, lval* a, char* func) {
 
   for (int i = 0; i < syms->count; i++) {
 
-    /* Debugging */
-    /* fprintf(stderr, "builtin_var: value %i: ", i+1); lval_fprintln(stderr, a->cell[i+1]); */
-
     if (strcmp(func, "def") == 0) { lenv_def(e, syms->cell[i], a->cell[i+1]); }
     if (strcmp(func, "set") == 0) { lenv_put(e, syms->cell[i], a->cell[i+1]); }
   }
@@ -1356,18 +1354,20 @@ lval* lval_eval_qexpr(lenv* e, lval* v) {
 }
 
 lval* lval_eval(lenv* e, lval* v) {
-  /* Debugging */
+#ifdef DEBUG
   fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Evaluating: "); lval_fprintln(stderr, v);
   eval_level++;
+#endif
 
   /* Symbols an Sexpressions are treated separately */
   if (v->type == LVAL_SYM) {
     lval* result = lenv_get(e, v);
     lval_del(v);
 
-    /* Debugging */
+#ifdef DEBUG
     eval_level--;
     fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+#endif
 
     return result;
   }
@@ -1375,17 +1375,20 @@ lval* lval_eval(lenv* e, lval* v) {
   if (v->type == LVAL_SEXPR) {
     lval* result = lval_eval_sexpr(e, v);
 
-    /* Debugging */
+#ifdef DEBUG
     eval_level--;
     fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+#endif
 
     return result; }
 
   /* All other lval types remain the same */
 
-  /* Debugging */
+#ifdef DEBUG
   eval_level--;
   fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, v);
+#endif
+
   return v;
 }
 
@@ -1405,7 +1408,7 @@ int main(int argc, char** argv) {
   Lambda  = mpc_new("lambda");
 
   /* Define them with the following language */
-  mpca_lang(MPC_LANG_DEFAULT,
+  mpca_lang(MPCA_LANG_DEFAULT,
     "                                                                   \
       number  : /-?[0-9]+\\.?[0-9]*/ ;                                  \
       boolean : \"true\" | \"false\" ;                                  \
@@ -1447,8 +1450,9 @@ int main(int argc, char** argv) {
       char* input = readline("lambda> ");
       add_history(input);
 
-      /* Debugging */
+#ifdef DEBUG
       fprintf(stderr, "Input: %s\n", input);
+#endif
 
       /* Attempt to parse the user input */
       mpc_result_t r;
