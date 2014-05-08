@@ -33,8 +33,6 @@
  *
  */
 
-#define DEBUG
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -1318,11 +1316,12 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
       default: v->cell[i] = lval_add(lval_qexpr(), v->cell[i]);
       }
     }
-  }
+  } else {
 
-  /* Evaluate other children */
-  for (int i = 1; i < v->count; i++) {
-    v->cell[i] = lval_eval(e, v->cell[i]);
+    /* Evaluate other children */
+    for (int i = 1; i < v->count; i++) {
+      v->cell[i] = lval_eval(e, v->cell[i]);
+    }
   }
 
   /* Error checking */
