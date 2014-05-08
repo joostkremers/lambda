@@ -909,7 +909,7 @@ lval* builtin_join(lenv* e, lval* a) {
 
 lval* builtin_cons(lenv* e, lval* a) {
   LASSERT_NARGS("cons", a, 2);
-  LASSERT_TYPE("cons", a, 0, LVAL_QEXPR);
+  LASSERT_TYPE("cons", a, 1, LVAL_QEXPR);
 
   /* Take the first element and turn it into a qexpr */
   lval* v = lval_add(lval_qexpr(), lval_pop(a, 0));
