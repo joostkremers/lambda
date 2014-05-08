@@ -33,6 +33,8 @@
  *
  */
 
+#define DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -1355,7 +1357,7 @@ lval* lval_eval_qexpr(lenv* e, lval* v) {
 
 lval* lval_eval(lenv* e, lval* v) {
 #ifdef DEBUG
-  fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Evaluating: "); lval_fprintln(stderr, v);
+  fprintf(stderr, "[%3i] %*s%s", eval_level, eval_level, "", "Evaluating: "); lval_fprintln(stderr, v);
   eval_level++;
 #endif
 
@@ -1366,7 +1368,7 @@ lval* lval_eval(lenv* e, lval* v) {
 
 #ifdef DEBUG
     eval_level--;
-    fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+    fprintf(stderr, "[%3i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
 #endif
 
     return result;
@@ -1377,7 +1379,7 @@ lval* lval_eval(lenv* e, lval* v) {
 
 #ifdef DEBUG
     eval_level--;
-    fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
+    fprintf(stderr, "[%3i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, result);
 #endif
 
     return result; }
@@ -1386,7 +1388,7 @@ lval* lval_eval(lenv* e, lval* v) {
 
 #ifdef DEBUG
   eval_level--;
-  fprintf(stderr, "[%i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, v);
+  fprintf(stderr, "[%3i] %*s%s", eval_level, eval_level, "", "Returning: "); lval_fprintln(stderr, v);
 #endif
 
   return v;
