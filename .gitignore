@@ -2,5 +2,5 @@
 /lambda
 /mpc.c
 /mpc.h
-/eval.log
+*.log
 /test.l
