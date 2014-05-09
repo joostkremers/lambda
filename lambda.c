@@ -1358,7 +1358,7 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
 }
 
 lval* lval_eval_qexpr(lenv* e, lval* v) {
-  v->type = LVAL_SEXPR;
+  if (v->type == LVAL_QEXPR) { v->type = LVAL_SEXPR; }
   return lval_eval(e, v);
 }
 
