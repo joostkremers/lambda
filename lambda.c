@@ -1173,6 +1173,7 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "head", builtin_head);
   lenv_add_builtin(e, "tail", builtin_tail);
   lenv_add_builtin(e, "eval", builtin_eval);
+  lenv_add_builtin(e, "!", builtin_eval);
   lenv_add_builtin(e, "join", builtin_join);
   lenv_add_builtin(e, "init", builtin_init);
   lenv_add_builtin(e, "cons", builtin_cons);
@@ -1308,11 +1309,18 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
   v->cell[0] = lval_eval(e, v->cell[0]);
 
   if (v->cell[0]->type == LVAL_MAC) {
+
     /* Convert all arguments into Q-expressions */
     for (int i = 1; i < v->count; i++) {
       switch (v->cell[i]->type) {
       case LVAL_QEXPR: break;
       case LVAL_SEXPR: v->cell[i]->type = LVAL_QEXPR; break;
+        /* If we find a !, replace it with the result of evaluation of the next argument */
+      case LVAL_SYM: if (strcmp(v->cell[i]->sym, "!") == 0) {
+          if (i == v->count-1) { return lval_err("Invalid use of !"); }
+          v->cell[i] = lval_eval(e, lval_pop(v, i+1));
+          break;
+        }
       default: v->cell[i] = lval_add(lval_qexpr(), v->cell[i]);
       }
     }
@@ -1413,7 +1421,7 @@ int main(int argc, char** argv) {
     "                                                                   \
       number  : /-?[0-9]+\\.?[0-9]*/ ;                                  \
       boolean : \"true\" | \"false\" ;                                  \
-      symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&%^]+/ ;                    \
+      symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>&%^]+/ | '!' ;               \
       string  : /\"(\\\\.|[^\"])*\"/ ;                                  \
       comment : /;[^\\r\\n]*/ ;                                         \
       sexpr   : '(' <expr>* ')' ;                                       \
