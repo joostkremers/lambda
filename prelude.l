@@ -212,13 +212,13 @@
         (elem x (tail l)))))
 
 ;; Find element in list of pairs
-(fn (lookup x l)
+(fn (assoc x l)
     (if (equal l nil)
         (error "No Element Found")
       (do
           (set '(key) (fst (fst l)))
           (set '(val) (snd (fst l)))
-        (if (equal key x) (val) (lookup x (tail l))))))
+        (if (equal key x) (val) (assoc x (tail l))))))
 
 ;; Zip two lists together into a list of pairs
 (fn (zip x y)
