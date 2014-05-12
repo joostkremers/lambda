@@ -72,7 +72,7 @@
 
 #define LASSERT_TYPE(fn, args, n, expt)                                 \
   if (args->cell[n]->type != expt) {                                    \
-    lval* err = lval_err("%s: Wrong type argument. Got %s, expected %s", fn, ltype_name(args->cell[n]->type), ltype_name(expt)); \
+    lval* err = lval_err("%s: wrong type argument. Got %s, expected %s", fn, ltype_name(args->cell[n]->type), ltype_name(expt)); \
     lval_del(args);                                                     \
     return err;                                                         \
   }
@@ -380,7 +380,7 @@ lval* lval_add(lval* v, lval* x) {
 lval* lval_read_num(mpc_ast_t* t) {
   errno = 0;
   double x = strtod(t->contents, NULL);
-  return errno != ERANGE ? lval_num(x) : lval_err("invalid number");
+  return errno != ERANGE ? lval_num(x) : lval_err("Invalid number");
 }
 
 lval* lval_read_str(mpc_ast_t* t) {
@@ -427,7 +427,7 @@ lval* lval_read(mpc_ast_t* t) {
   return x;
 }
 
-/* Print lval to file descripton */
+/* Print lval to file descriptor */
 void lval_fprint(FILE* stream, lval* v);
 
 void lval_fprint_fn(FILE* stream, lval* v) {
@@ -765,7 +765,7 @@ lval* builtin_and(lenv* e, lval* a) {
 
     result = lval_eval_qexpr(e, arg);
     if (result->type != LVAL_BOOL) {
-      lval* err = lval_err("and: Wrong type argument. Got %s, expected boolean", result->type);
+      lval* err = lval_err("and: wrong type argument. Got %s, expected boolean", result->type);
       lval_del(a); lval_del(result);
       return err;
     }
@@ -793,7 +793,7 @@ lval* builtin_or(lenv* e, lval* a) {
 
     result = lval_eval_qexpr(e, arg);
     if (result->type != LVAL_BOOL) {
-      lval* err = lval_err("or: Wrong type argument. Got %s, expected boolean", result->type);
+      lval* err = lval_err("or: wrong type argument. Got %s, expected boolean", result->type);
       lval_del(a); lval_del(result);
       return err;
     }
