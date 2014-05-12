@@ -208,7 +208,7 @@
     (if (equal l nil)
         false
       (if (equal x (fst l))
-          true\
+          true
         (elem x (tail l)))))
 
 ;; Find element in list of pairs
