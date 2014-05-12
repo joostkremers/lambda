@@ -514,14 +514,16 @@ struct lenv {
   lenv* par;
   int count;
   char** syms;
+  char** docs;
   lval** vals;
 };
 
 lenv* lenv_new(void) {
-  lenv* e = malloc(sizeof(lval));
+  lenv* e = malloc(sizeof(lenv));
   e->par = NULL;
   e->count = 0;
   e->syms = NULL;
+  e->docs = NULL;
   e->vals = NULL;
   return e;
 }
@@ -529,9 +531,11 @@ lenv* lenv_new(void) {
 void lenv_del(lenv* e) {
   for (int i = 0; i < e->count; i++) {
     free(e->syms[i]);
+    free(e->docs[i]);
     lval_del(e->vals[i]);
   }
   free(e->syms);
+  free(e->docs);
   free(e->vals);
   free(e);
 }
@@ -549,16 +553,39 @@ lval* lenv_get(lenv* e, lval* k) {
   }
 }
 
-void lenv_put(lenv* e, lval* k, lval* v) {
+lval* lenv_doc(lenv* e, lval* k) {
+
+  for (int i = 0; i < e->count; i++) {
+    if (strcmp(e->syms[i], k->sym) == 0) {
+      if (e->docs[i]) { return lval_str(e->docs[i]); }
+      else { return lval_err("Symbol not documented"); }
+    }
+  }
+  /* If no symbol found check in parent otherwise return error */
+  if (e->par) {
+    return lenv_doc(e->par, k);
+  } else {
+    return lval_err("Unbound symbol '%s'", k->sym);
+  }
+}
+
+void lenv_put(lenv* e, lval* key, lval* val, char* doc) {
 
   /* Iterate over all items in environment */
   /* This is to see if variable already exists */
   for (int i = 0; i < e->count; i++) {
     /* If variable is found delete item at that position */
     /* And replace with variable supplied by user */
-    if (strcmp(e->syms[i], k->sym) == 0) {
+    if (strcmp(e->syms[i], key->sym) == 0) {
       lval_del(e->vals[i]);
-      e->vals[i] = lval_copy(v);
+      if (doc) {
+        e->docs[i] = realloc(e->docs[i], strlen(doc) + 1);
+        strcpy(e->docs[i], doc);
+      } else {
+        free(e->docs[i]);
+        e->docs[i] = NULL;
+      }
+      e->vals[i] = lval_copy(val);
       return;
     }
   }
@@ -566,18 +593,25 @@ void lenv_put(lenv* e, lval* k, lval* v) {
   /* If no existing entry found then allocate space for new entry */
   e->count++;
   e->vals = realloc(e->vals, sizeof(lval*) * e->count);
+  e->docs = realloc(e->docs, sizeof(char*) * e->count);
   e->syms = realloc(e->syms, sizeof(char*) * e->count);
 
-  /* Copy contents of lval and symbol string into new location */
-  e->vals[e->count-1] = lval_copy(v);
-  e->syms[e->count-1] = malloc(strlen(k->sym)+1);
-  strcpy(e->syms[e->count-1], k->sym);
+  /* Copy contents of lval, doc and symbol string into new location */
+  e->vals[e->count-1] = lval_copy(val);
+  if (doc) {
+    e->docs[e->count-1] = malloc(strlen(doc) + 1);
+    strcpy(e->docs[e->count-1], doc);
+  } else {
+    e->docs[e->count-1] = NULL;
+  }
+  e->syms[e->count-1] = malloc(strlen(key->sym)+1);
+  strcpy(e->syms[e->count-1], key->sym);
 }
 
-void lenv_def(lenv* e, lval* k, lval* v) {
+void lenv_def(lenv* e, lval* key, lval* val, char* doc) {
   /* Find top environment and add (k, v) there */
   while (e->par) { e = e->par; }
-  lenv_put(e, k, v);
+  lenv_put(e, key, val, doc);
 }
 
 lenv* lenv_copy(lenv* e) {
@@ -585,10 +619,13 @@ lenv* lenv_copy(lenv* e) {
   n->par = e->par;
   n->count = e->count;
   n->syms = malloc(sizeof(char*) * n->count);
+  n->docs = malloc(sizeof(char*) * n->count);
   n->vals = malloc(sizeof(lval*) * n->count);
   for (int i = 0; i < e->count; i++) {
     n->syms[i] = malloc(strlen(e->syms[i]) + 1);
     strcpy(n->syms[i], e->syms[i]);
+    n->docs[i] = malloc(strlen(e->docs[i]) + 1);
+    strcpy(n->docs[i], e->docs[i]);
     n->vals[i] = lval_copy(e->vals[i]);
   }
   return n;
@@ -725,6 +762,18 @@ lval* builtin_equal(lenv* e, lval* a) {
   return lval_bool(r);
 }
 
+lval* builtin_null(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: null <qexpr> */
+  /* Description: return true if <qexpr> is '() */
+
+  LASSERT_NARGS("null", a, 1);
+  LASSERT_TYPE("null", a, 0, LVAL_QEXPR);
+
+  if (a->cell[0]->count == 0) { lval_del(a); return lval_bool(true); }
+  else { lval_del(a); return lval_bool(false); }
+}
+
 lval* builtin_if(lenv* e, lval* a) {
   /* Type: macro */
   /* Format: if <bool> <then> (<else>) */
@@ -850,6 +899,21 @@ lval* builtin_tail(lenv* e, lval* a) {
   return v;
 }
 
+lval* builtin_last(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: last <qexpr> */
+  /* Description: return last element of <qexpr> */
+  /* Example: init '(1 2 3 4) ==> '(4) */
+
+  LASSERT_NELIST("last", a);
+  LASSERT_NARGS("last", a, 1);
+  LASSERT_TYPE("last", a, 0, LVAL_QEXPR);
+
+  lval* v = lval_take(a, 0);
+  while (v->count > 1) { lval_del(lval_pop(v, 0)); }
+  return v;
+}
+
 lval* builtin_init(lenv* e, lval* a) {
   /* Type: function */
   /* Format: init <qexpr> */
@@ -933,30 +997,71 @@ lval* builtin_len(lenv* e, lval* a) {
   return l;
 }
 
-lval* builtin_var(lenv* e, lval* a, char* func) {
-  LASSERT_TYPE(func, a, 0, LVAL_QEXPR);
+lval* builtin_nth(lenv* e, lval* a) {
+  /* Type: function */
+  /* Format: nth <n> <qexpr> */
+  /* Description: return nth element of <qexpr>; zero-based */
+  /* If n<0, count from end of list */
+  /* nth 2 '(a b c d) ==> '(c) */
+  /* nth -2 '(a b c d) ==> '(c) */
+
+  LASSERT_NARGS("nth", a, 2);
+  LASSERT_TYPE("nth", a, 0, LVAL_NUM);
+  LASSERT_TYPE("nth", a, 1, LVAL_QEXPR);
+
+  int n = a->cell[0]->num;
+  if (n < 0) { n += a->cell[1]->count; }
+  LASSERT(a, (0 <= n) && (n < a->cell[1]->count), "nth: argument out of bounds");
+
+  lval* v = lval_take(a, 1);
+  lval* r = lval_add(lval_qexpr(), lval_take(v, n));
+  return r;
+}
+
+lval* builtin_set(lenv* e, lval* a) {
+  LASSERT_TYPE("set", a, 0, LVAL_QEXPR);
 
   /* First argument must be a symbol list */
   lval* syms = a->cell[0];
   for (int i = 0; i < syms->count; i++) {
-    LASSERT(a, (syms->cell[i]->type == LVAL_SYM), "def: Cannot define non-symbol");
+    LASSERT(a, (syms->cell[i]->type == LVAL_SYM), "set: cannot define non-symbol");
   }
 
   /* Check correct number of symbols and values */
-  LASSERT(a, (syms->count == a->count-1), "def: incorrect number of values to symbols");
+  LASSERT(a, (syms->count == a->count-1), "set: incorrect number of values to symbols");
 
   for (int i = 0; i < syms->count; i++) {
-
-    if (strcmp(func, "def") == 0) { lenv_def(e, syms->cell[i], a->cell[i+1]); }
-    if (strcmp(func, "set") == 0) { lenv_put(e, syms->cell[i], a->cell[i+1]); }
+    lenv_put(e, syms->cell[i], a->cell[i+1], NULL);
   }
 
   lval_del(a);
   return lval_sexpr();
 }
 
-lval* builtin_def(lenv* e, lval* a) { return builtin_var(e, a, "def"); }
-lval* builtin_put(lenv* e, lval* a) { return builtin_var(e, a, "set"); }
+lval* builtin_def(lenv* e, lval* a) {
+  LASSERT_VAR_NARGS("def", a, 2, 3);
+  LASSERT_TYPE("def", a, 0, LVAL_QEXPR);
+
+  char* doc = NULL;
+  lval* sym = a->cell[0];
+
+  /* First argument must be a list with one symbol */
+  if (sym->count != 1) { lval_del(a); return lval_err("def: wrong number of symbols"); }
+  if (sym->cell[0]->type != LVAL_SYM) { lval_del(a); return lval_err("def: cannot define non-symbol"); }
+
+  /* Test the third argument */
+  /* If it's a boolean, we ignore it; that allows us to  */
+  if (a->count == 3 && a->cell[2]->type != LVAL_BOOL) {
+    LASSERT(a, (a->cell[2]->type == LVAL_STR), "def: documentation is not of type string. Got %s instead", ltype_name(a->cell[2]->type));
+    doc = a->cell[2]->str;
+  }
+
+  /* Put the definition in the global environment */
+  lenv_def(e, sym->cell[0], a->cell[1], doc);
+
+  lval_del(a);
+  return lval_sexpr();
+}
 
 lval* builtin_lambda(lenv* e, lval* a) {
   LASSERT_NARGS("\\", a, 2);
@@ -1128,6 +1233,18 @@ lval* builtin_typeof(lenv* e, lval* a) {
   return v;
 }
 
+lval* builtin_doc(lenv* e, lval* a) {
+  /* Return the doc string of a */
+
+  LASSERT_TYPE("doc", a, 1, LVAL_QEXPR);
+  LASSERT(a, (a->cell[0]->cell[0]->type == LVAL_SYM), "doc: type %s has no doc string", ltype_name(a->cell[0]->type));
+
+  lval* v = lenv_doc(e, a->cell[0]->cell[0]);
+
+  lval_del(a);
+  return v;
+}
+
 lval* builtin_exit(lenv* e, lval* a) {
   /* If there is no argument, exit unconditionally */
   /* Note, it's currently not possible to have a function without arguments! */
@@ -1152,70 +1269,74 @@ lval* builtin_gt(lenv* e, lval* a) { return builtin_comp(e, a, ">"); }
 lval* builtin_le(lenv* e, lval* a) { return builtin_comp(e, a, "<="); }
 lval* builtin_ge(lenv* e, lval* a) { return builtin_comp(e, a, ">="); }
 
-void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
+void lenv_add_builtin(lenv* e, char* name, lbuiltin func, char* doc) {
   lval* k = lval_sym(name);
   lval* v = lval_fun(func, LVAL_FUN);
-  lenv_put(e, k, v);
+  lenv_put(e, k, v, doc);
   lval_del(k); lval_del(v);
 }
 
-void lenv_add_builtin_mac(lenv* e, char* name, lbuiltin mac) {
+void lenv_add_builtin_mac(lenv* e, char* name, lbuiltin mac, char* doc) {
   lval* k = lval_sym(name);
   lval* v = lval_fun(mac, LVAL_MAC);
-  lenv_put(e, k, v);
+  lenv_put(e, k, v, doc);
   lval_del(k); lval_del(v);
 }
 
 void lenv_add_builtins(lenv* e) {
 
   /* List functions */
-  lenv_add_builtin(e, "list", builtin_list);
-  lenv_add_builtin(e, "head", builtin_head);
-  lenv_add_builtin(e, "tail", builtin_tail);
-  lenv_add_builtin(e, "eval", builtin_eval);
-  lenv_add_builtin(e, "join", builtin_join);
-  lenv_add_builtin(e, "init", builtin_init);
-  lenv_add_builtin(e, "cons", builtin_cons);
-  lenv_add_builtin(e, "len", builtin_len);
+  lenv_add_builtin(e, "list", builtin_list, "Construct a list.");
+  lenv_add_builtin(e, "head", builtin_head, NULL);
+  lenv_add_builtin(e, "tail", builtin_tail, NULL);
+  lenv_add_builtin(e, "last", builtin_last, NULL);
+  lenv_add_builtin(e, "eval", builtin_eval, NULL);
+  lenv_add_builtin(e, "join", builtin_join, NULL);
+  lenv_add_builtin(e, "init", builtin_init, NULL);
+  lenv_add_builtin(e, "cons", builtin_cons, NULL);
+  lenv_add_builtin(e, "len", builtin_len, NULL);
+  lenv_add_builtin(e, "nth", builtin_nth, NULL);
 
   /* Variable functions */
-  lenv_add_builtin(e, "def", builtin_def);
-  lenv_add_builtin(e, "set", builtin_put);
+  lenv_add_builtin(e, "def", builtin_def, NULL);
+  lenv_add_builtin(e, "set", builtin_set, NULL);
+  lenv_add_builtin_mac(e, "doc", builtin_doc, NULL);
 
   /* General functions */
-  lenv_add_builtin(e, "\\", builtin_lambda);
-  lenv_add_builtin(e, "^", builtin_macro);
-  lenv_add_builtin(e, "exit", builtin_exit);
-  lenv_add_builtin(e, "typeof", builtin_typeof);
-  lenv_add_builtin(e, "load", builtin_load);
-  lenv_add_builtin(e, "print", builtin_print);
-  lenv_add_builtin(e, "error", builtin_error);
-  lenv_add_builtin(e, "puts", builtin_puts);
-  lenv_add_builtin(e, "read", builtin_read);
-  lenv_add_builtin(e, "input", builtin_input);
+  lenv_add_builtin(e, "\\", builtin_lambda, NULL);
+  lenv_add_builtin(e, "^", builtin_macro, NULL);
+  lenv_add_builtin(e, "exit", builtin_exit, NULL);
+  lenv_add_builtin(e, "typeof", builtin_typeof, NULL);
+  lenv_add_builtin(e, "load", builtin_load, NULL);
+  lenv_add_builtin(e, "print", builtin_print, NULL);
+  lenv_add_builtin(e, "error", builtin_error, NULL);
+  lenv_add_builtin(e, "puts", builtin_puts, NULL);
+  lenv_add_builtin(e, "read", builtin_read, NULL);
+  lenv_add_builtin(e, "input", builtin_input, NULL);
 
   /* Mathematical functions */
-  lenv_add_builtin(e, "+", builtin_add);
-  lenv_add_builtin(e, "-", builtin_sub);
-  lenv_add_builtin(e, "*", builtin_mul);
-  lenv_add_builtin(e, "/", builtin_div);
-  lenv_add_builtin(e, "pow", builtin_pow);
-  lenv_add_builtin(e, "mod", builtin_mod);
+  lenv_add_builtin(e, "+", builtin_add, NULL);
+  lenv_add_builtin(e, "-", builtin_sub, NULL);
+  lenv_add_builtin(e, "*", builtin_mul, NULL);
+  lenv_add_builtin(e, "/", builtin_div, NULL);
+  lenv_add_builtin(e, "pow", builtin_pow, NULL);
+  lenv_add_builtin(e, "mod", builtin_mod, NULL);
 
   /* Comparison functions */
-  lenv_add_builtin_mac(e, "if", builtin_if);
-  lenv_add_builtin(e, "=", builtin_eq);
-  lenv_add_builtin(e, "/=", builtin_nq);
-  lenv_add_builtin(e, "<", builtin_lt);
-  lenv_add_builtin(e, ">", builtin_gt);
-  lenv_add_builtin(e, "<=", builtin_le);
-  lenv_add_builtin(e, ">=", builtin_ge);
-  lenv_add_builtin(e, "equal", builtin_equal);
+  lenv_add_builtin_mac(e, "if", builtin_if, NULL);
+  lenv_add_builtin(e, "=", builtin_eq, NULL);
+  lenv_add_builtin(e, "/=", builtin_nq, NULL);
+  lenv_add_builtin(e, "<", builtin_lt, NULL);
+  lenv_add_builtin(e, ">", builtin_gt, NULL);
+  lenv_add_builtin(e, "<=", builtin_le, NULL);
+  lenv_add_builtin(e, ">=", builtin_ge, NULL);
+  lenv_add_builtin(e, "equal", builtin_equal, NULL);
+  lenv_add_builtin(e, "null", builtin_null, NULL);
 
   /* Logical functions */
-  lenv_add_builtin_mac(e, "and", builtin_and);
-  lenv_add_builtin_mac(e, "or", builtin_or);
-  lenv_add_builtin(e, "not", builtin_not);
+  lenv_add_builtin_mac(e, "and", builtin_and, NULL);
+  lenv_add_builtin_mac(e, "or", builtin_or, NULL);
+  lenv_add_builtin(e, "not", builtin_not, NULL);
 }
 
 lval* lval_call(lenv* e, lval* f, lval* a) {
@@ -1249,7 +1370,7 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
 
       /* Next formal should be bound to remaining arguments */
       lval* nsym = lval_pop(f->formals, 0);
-      lenv_put(f->env, nsym, builtin_list(e, a));
+      lenv_put(f->env, nsym, builtin_list(e, a), NULL);
       lval_del(sym); lval_del(nsym);
       break;
     }
@@ -1258,7 +1379,7 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
     lval* val = lval_pop(a, 0);
 
     /* Bind a copy into the function's environment */
-    lenv_put(f->env, sym, val);
+    lenv_put(f->env, sym, val, NULL);
 
     /* Delete symbol and value */
     lval_del(sym); lval_del(val);
@@ -1283,7 +1404,7 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
     lval* val = lval_qexpr();
 
     /* Bind to environment and delete */
-    lenv_put(f->env, sym, val);
+    lenv_put(f->env, sym, val, NULL);
     lval_del(sym); lval_del(val);
   }
 

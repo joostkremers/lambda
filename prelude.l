@@ -121,24 +121,10 @@
 ;;; List Functions
 
 ;; First, Second, or Third Item in List
-(fn (fst l) (eval (head l)))
-(fn (snd l) (eval (head (tail l))))
-(fn (trd l) (eval (head (tail (tail l)))))
+(fn (fst l) (eval (nth 0 l)))
+(fn (snd l) (eval (nth 1 l)))
+(fn (trd l) (eval (nth 2 l)))
 
-;; List Length
-(fn (len l)
-    (if (equal l nil)
-        (0)
-      (+ 1 (len (tail l)))))
-
-;; Nth item in List
-(fn (nth n l)
-    (if (= n 0)
-        (fst l)
-      (nth (- n 1) (tail l))))
-
-;; Last item in List
-(fn (last l) (nth (- (len l) 1) l))
 
 ;; Apply Function to List
 (fn (map f l)
