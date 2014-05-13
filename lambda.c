@@ -1430,13 +1430,15 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
 
 lval* lval_eval_sexpr(lenv* e, lval* v) {
 
-  /* Evaluate first child and check if result is a macro */
-  v->cell[0] = lval_eval(e, v->cell[0]);
+  /* Empty expressions */
+  if (v->count == 0) { return v; }
 
+  /* Evaluate first child */
+  v->cell[0] = lval_eval(e, v->cell[0]);
   if (v->cell[0]->type == LVAL_ERR) { return lval_take(v, 0); }
 
+  /* Check if we're dealing with a macro */
   if (v->cell[0]->type == LVAL_MAC) {
-
     /* Convert all arguments into Q-expressions */
     for (int i = 1; i < v->count; i++) {
       switch (v->cell[i]->type) {
@@ -1452,16 +1454,12 @@ lval* lval_eval_sexpr(lenv* e, lval* v) {
       }
     }
   } else {
-
     /* Evaluate other children */
     for (int i = 1; i < v->count; i++) {
       v->cell[i] = lval_eval(e, v->cell[i]);
       if (v->cell[i]->type == LVAL_ERR) { return lval_take(v, i); }
     }
   }
-
-  /* Empty expressions */
-  if (v->count == 0) { return v; }
 
   /* Single expression */
   if (v->count == 1) { return lval_take(v, 0); }
