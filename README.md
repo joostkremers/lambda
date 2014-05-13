@@ -226,37 +226,22 @@ The macros for defining variables (`var`), functions (`fn`), and macros (`mac`) 
         (if (< item rest) item rest))))
 ```
 
-In the REPL, `doc` will display the doc string:
+The built-in function `doc` can be used to obtain the doc string:
 
 ```
 lambda> doc min
 >> "Return the smallest of a series of numbers."
 ```
 
-Similarly, the macro `case`:
+A better alternative is the macro `describe`, however:
 
 ```
-(mac (case _x & _cs)
-     "Usage: (case <expr> (<clauses>))
- 
-Evaluate <expr> and choose among <clauses> based on that value. Each
-<clause> is of the form (<val> <body>); <expr> is compared with <val> and
-<body> is evaluated if they are equal."
-     (if (equal _cs nil)
-         (error "No Case Found")
-       (if (equal (eval _x) (fst (fst _cs)))
-           (snd (fst _cs))
-         (unpack case (join (list _x) (tail _cs))))))
-```
-In the REPL:
+lambda> describe split
 
-```
-lambda> (puts (doc case))
-Usage: (case <expr> (<clauses>))
- 
-Evaluate <expr> and choose among <clauses> based on that value. Each
-<clause> is of the form (<val> <body>); <expr> is compared with <val> and
-<body> is evaluated if they are equal.
+(split n list)
+
+Split <list> at the <n>th element.
+
 >> ()
 ```
 

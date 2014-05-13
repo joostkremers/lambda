@@ -323,3 +323,12 @@ Unzip a list of pairs into two lists:
           (set '(x) (fst l))
           (set '(xs) (unzip (tail l)))
         (list (join (head x) (fst xs)) (join (tail x) (snd xs))))))
+
+(mac (describe f)
+     "(describe func)
+
+Display the doc string of <func>."
+     (do
+         (puts "")
+         (puts (doc !f))
+       (puts "")))
