@@ -229,12 +229,3 @@ Format: (var <sym> <val> [<doc string>])")
           (set '(x) (fst l))
           (set '(xs) (unzip (tail l)))
         (list (join (head x) (fst xs)) (join (tail x) (snd xs))))))
-
-;;; Other Fun
-
-;; Fibonacci
-(fn (fib n)
-    (select
-     ((= n 0) 0)
-     ((= n 1) 1)
-     (otherwise (+ (fib (- n 1)) (fib (- n 2))))))
