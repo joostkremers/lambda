@@ -624,8 +624,13 @@ lenv* lenv_copy(lenv* e) {
   for (int i = 0; i < e->count; i++) {
     n->syms[i] = malloc(strlen(e->syms[i]) + 1);
     strcpy(n->syms[i], e->syms[i]);
-    n->docs[i] = malloc(strlen(e->docs[i]) + 1);
-    strcpy(n->docs[i], e->docs[i]);
+    /* A symbol may have no doc string at all */
+    if (e->docs[i]) {
+      n->docs[i] = malloc(strlen(e->docs[i]) + 1);
+      strcpy(n->docs[i], e->docs[i]);
+    } else {
+      n->docs[i] = NULL;
+    }
     n->vals[i] = lval_copy(e->vals[i]);
   }
   return n;
