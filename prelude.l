@@ -41,44 +41,56 @@
                     (\ (tail f) (last b))
                     (if (= (len b) 2)
                         (eval (nth 0 b)))))
-     "Define a function.
+     "(fn (name arg*) [\"doc string\"] (body))
 
-Format: (fn (<name> <arg>*) [<doc string>] <body>")
+Define <name> as a global function with arguments <arg>*. The documenation
+string is optional.")
 
 (def '(mac) (^ '(f & b)
                '(def (head f)
                      (^ (tail f) (last b))
                      (if (= (len b) 2)
                          (eval (nth 0 b)))))
-     "Define a macro.
+     "(mac (name arg*) [\"doc string\"] (body))
 
-Format: (mac (<name> <arg>*) [<doc string>] <body>")
+Define <name> as a global macro with arguments <arg>*. The documenation
+string is optional.")
 
 ;; Variable definition
 (def '(var) (^ '(name val & doc)
                '(def name val (if (not (null doc))
                                   (eval (nth 0 doc)))))
-     "Define a variable.
+     "(var sym val [\"doc string\"])
 
-Format: (var <sym> <val> [<doc string>])")
+Define <sym> as a global variable with value <val>. The documentation
+string is optional.")
 
 ;; Open new scope
 (fn (let b)
     (((\ '(_) b) ())))
 
-;; Unpack List to Function
 (fn (unpack f l)
+    "(unpack func list)
+
+Unpack the elements of <list> as of arguments to <func>:
+(unpack + '(2 3 4)) ==> 9"
     (eval (join (list f) l)))
 
 ;; Unapply List to Function
-(fn (pack f & xs) (f xs))
+(fn (pack f & xs)
+    "(pack func & arg*)
 
-;; Curried and Uncurried calling
-(def '(curry) '(unpack))
-(def '(uncurry) '(pack))
+Pack a series of <arg>* into a list and apply <func> to it.
+(pack head 5 6 7) ==> '(5)"
+    (f xs))
 
-;; Perform Several things in Sequence
+(def '(curry) unpack "(curry func list)")
+(def '(uncurry) pack "(uncurry func arg*)")
+
 (fn (do & l)
+    "(do & clause*)
+
+Evaluate each <clause> in sequence and return the result of the last one."
     (if (equal l nil)
         (nil)
       (last l)))
@@ -86,8 +98,10 @@ Format: (var <sym> <val> [<doc string>])")
 
 ;;; Numeric Functions
 
-;; Minimum of Arguments
 (fn (min & xs)
+    "(min & num*)
+
+Return the smallest of a series of <num>*."
     (if (equal (tail xs) nil)
         (fst xs)
       (do
@@ -97,6 +111,9 @@ Format: (var <sym> <val> [<doc string>])")
 
 ;; Maximum of Arguments
 (fn (max & xs)
+    "(max & num*)
+
+Return the largest of a series of <num>*."
     (if (equal (tail xs) nil) '(fst xs)
       (do
           (set '(rest) (unpack max (tail xs)))
@@ -106,6 +123,11 @@ Format: (var <sym> <val> [<doc string>])")
 ;;; Conditional Functions
 
 (mac (select & _cs)
+     "(select & <clause>*)
+
+Each clause is of the form (<expr> <body>), where <expr> is evaluated and
+should return a boolean. For the first <expr> that returns true, <body> is
+evaluated and its result returned."
      (if (equal _cs nil)
          (error "No Selection Found")
        (if (fst (fst _cs))
@@ -113,6 +135,11 @@ Format: (var <sym> <val> [<doc string>])")
          (unpack select (tail _cs)))))
 
 (mac (case _x & _cs)
+     "(case <expr> & <clause>*)
+
+Evaluate <expr> and choose among <clause>* based on that value. Each
+<clause> is of the form (<val> <body>); <expr> is compared with <val> and
+<body> is evaluated if they are equal."
      (if (equal _cs nil)
          (error "No Case Found")
        (if (equal (eval _x) (fst (fst _cs)))
@@ -124,25 +151,49 @@ Format: (var <sym> <val> [<doc string>])")
 
 ;;; Misc Functions
 
-(fn (flip f a b) (f b a))
-(fn (ghost & xs) (eval xs))
-(fn (comp f g x) (f (g x)))
+(fn (flip f a b)
+    "(flip func a b)
+
+Apply <func> with arguments a and b reversed."
+    (f b a))
+
+(fn (comp f g x)
+    "(comp func1 func2 arg)
+
+Apply <func2> to <arg> and apply the result to <func1>."
+    (f (g x)))
 
 ;;; List Functions
 
-(fn (fst l) "Return first element of L." (nth 0 l))
-(fn (snd l) "Return second element of L." (nth 1 l))
-(fn (trd l) "Return third element of L." (nth 2 l))
+(fn (fst l) "(fst list)
 
+Return and evaluate first element of <list>."
+    (nth 0 l))
 
-;; Apply Function to List
+(fn (snd l) "(snd list)
+
+Return and evaluate second element of <list>."
+    (nth 1 l))
+
+(fn (trd l)
+    "(trd list)
+
+Return and evaluate third element of <list>."
+    (nth 2 l))
+
 (fn (map f l)
+    "(map func list)
+
+Apply <func> to each element in <list> and collect the results in a list."
     (if (equal l nil)
         nil
       (join (list (f (fst l))) (map f (tail l)))))
 
-;; Apply Filter to List
 (fn (filter f l)
+    "(filter pred list)
+
+Test each element in <list> using <pred> and return a list of elements for
+which <pred> returns true."
     (if (equal l nil)
         nil
       (join (if (f (fst l))
@@ -150,64 +201,97 @@ Format: (var <sym> <val> [<doc string>])")
               nil)
             (filter f (tail l)))))
 
-;; Reverse List
 (fn (reverse l)
+    "(reverse list)
+
+Reverse <list>."
     (if (equal l nil)
         nil
       (join (reverse (tail l)) (head l))))
 
-;; Fold Left
 (fn (foldl f z l)
+    "(foldl func val list)
+
+Fold <list> from the left using <func> with <val> as the starting value."
     (if (equal l nil)
         z
       (foldl f (f z (fst l)) (tail l))))
 
 ;; Fold Right
 (fn (foldr f z l)
+    "(foldr func val list)
+
+Fold <list> from the right using <func> with <val> as the starting value."
     (if (equal l nil)
         z
       (f (fst l) (foldr f z (tail l)))))
 
-(fn (sum l) (foldl + 0 l))
-(fn (product l) (foldl * 1 l))
+(fn (sum l)
+    "(sum list)
+
+Return the sum of the values in <list>."
+    (foldl + 0 l))
+
+(fn (product l)
+    "(product list)
+
+Return the product of the values in <list>."
+    (foldl * 1 l))
 
 ;; Take N items
 (fn (take n l)
+    "(take num list)
+
+Return the first <num> items of <list>."
     (if (= n 0)
         nil
       (join (head l) (take (- n 1) (tail l)))))
 
-;; Drop N items
 (fn (drop n l)
+    "(drop num list)
+
+Drop the first <num> items from <list> and return the rest."
     (if (= n 0)
         l
       (drop (- n 1) (tail l))))
 
-;; Split at N
-(fn (split n l) (list (take n l) (drop n l)))
+(fn (split n l)
+    "(split n list)
 
-;; Take While
+Split <list> at the <n>th element."
+    (list (take n l) (drop n l)))
+
 (fn (take-while f l)
+    "(take-while pred list)
+
+Collect elements from <list> as long as they satisfy <pred>."
     (if (not (unpack f (head l)))
         nil
       (join (head l) (take-while f (tail l)))))
 
-;; Drop While
 (fn (drop-while f l)
+    "(drop-while pred list)
+
+Collect elements from <list> as long as they do not satisfy <pred>."
     (if (not (unpack f (head l)))
         l
       (drop-while f (tail l))))
 
-;; Element of List
 (fn (elem x l)
+    "(elem e list)
+
+Return true if <e> is in <list>, false otherwise."
     (if (equal l nil)
         false
       (if (equal x (fst l))
           true
         (elem x (tail l)))))
 
-;; Find element in list of pairs
 (fn (assoc x l)
+    "(assoc x list)
+
+<list> must be a list of (<key> <value>) pairs. Return the first element of
+<list> where <x> matches <key>."
     (if (equal l nil)
         (error "No Element Found")
       (do
@@ -217,12 +301,22 @@ Format: (var <sym> <val> [<doc string>])")
 
 ;; Zip two lists together into a list of pairs
 (fn (zip x y)
+    "(zip list1 list2)
+
+Zip two lists:
+
+(zip '(1 2 3) '(4 5 6)) ==> '('(1 4) '(2 5) '(3 6))"
     (if (or (equal x nil) (equal y nil))
         nil
       (join (list (join (head x) (head y))) (zip (tail x) (tail y)))))
 
 ;; Unzip a list of pairs into two lists
 (fn (unzip l)
+    "(unzip list)
+
+Unzip a list of pairs into two lists:
+
+(unzip '('(1 4) '(2 5) '(3 6)) ==> '('(1 2 3) '(4 5 6))"
     (if (equal l nil)
         (list nil nil)
       (do
