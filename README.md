@@ -89,10 +89,10 @@ Functions are first-class objects and can be created with the function `\` ("lam
 
 ```
 lambda> (def '(plus5) (\ '(a) '(+ 5 a)))
-\>> ()
+>> ()
  
 lambda> (plus5 7)
-\>> 12
+>> 12
 ```
 
 However, there is a more convenient way to define functions:
@@ -177,21 +177,21 @@ One crucial point is that s-expression that have only one element are *not* cons
 
 ```
 lambda> (eval '("a string"))
-\>> "a string"
+>> "a string"
 ```
 
 Compare:
 
 ```
 lambda> (eval '("one string" "another string"))
-\>> Error: Not a function. Got type String instead
+>> Error: Not a function. Got type String instead
 ```
 
 This also means that it is not possible to define functions that take no arguments. You can evaluate an s-expression with a function as its only element, but it returns the function itself:
 
 ```
 lambda> (eval (list))
-\>> <builtin function at 0x14198c0>
+>> <builtin function at 0x14198c0>
 ```
 
 Strictly speaking, functions that take no arguments are not functions at all, so this state of affairs makes sense.
@@ -203,14 +203,14 @@ The function `def` defines a symbol as a variable in the global name space. You 
 
 ```
 lambda> (def '(temp) 18 "Global temperature")
-\>> ()
+>> ()
 ```
 
 The doc string can be retrieved again with the `doc` macro:
 
 ```
 lambda> (doc temp)
-\>> "Global temperature"
+>> "Global temperature"
 ```
 
 The macros for defining variables (`var`), functions (`fn`), and macros (`mac`) all take an optional doc string. For example, the function `min` from the prelude:
@@ -230,7 +230,7 @@ In the REPL, `doc` will display the doc string:
 
 ```
 lambda> doc min
-\>> "Return the smallest of a series of numbers."
+>> "Return the smallest of a series of numbers."
 ```
 
 Similarly, the macro `case`:
@@ -257,7 +257,7 @@ Usage: (case <expr> (<clauses>))
 Evaluate <expr> and choose among <clauses> based on that value. Each
 <clause> is of the form (<val> <body>); <expr> is compared with <val> and
 <body> is evaluated if they are equal.
-\>> ()
+>> ()
 ```
 
 `fn` and `mac` both have an optional doc string as their second argument, before the body of the function. `var`, on the other hand, has an optional doc string as its third argument, just like `def`:
