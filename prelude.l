@@ -36,21 +36,31 @@
 ;;; Functional Functions
 
 ;; Function definition
-(def '(fn) (^ '(f b)
-              '(def (head f) (\ (tail f) b))))
+(def '(fn) (^ '(f & b)
+              '(def (head f)
+                    (\ (tail f) (last b))
+                    (if (= (len b) 2)
+                        (eval (nth 0 b)))))
+     "Define a function.
 
-(def '(mac) (^ '(f b)
-               '(def (head f) (^ (tail f) b))))
+Format: (fn (<name> <arg>*) [<doc string>] <body>")
+
+(def '(mac) (^ '(f & b)
+               '(def (head f)
+                     (^ (tail f) (last b))
+                     (if (= (len b) 2)
+                         (eval (nth 0 b)))))
+     "Define a macro.
+
+Format: (mac (<name> <arg>*) [<doc string>] <body>")
 
 ;; Variable definition
-;;
-;; Usage:
-;;
-;; > var a 1 ==> binds a to 1
-;; > var (a b) 1 2 ==> binds a to 1 and b to 2
-;;
-(def '(var) (^ '(names & vals)
-               '(unpack def (join (list names) (map eval vals)))))
+(def '(var) (^ '(name val & doc)
+               '(def name val (if (not (null doc))
+                                  (eval (nth 0 doc)))))
+     "Define a variable.
+
+Format: (var <sym> <val> [<doc string>])")
 
 ;; Open new scope
 (fn (let b)
@@ -120,10 +130,9 @@
 
 ;;; List Functions
 
-;; First, Second, or Third Item in List
-(fn (fst l) (eval (nth 0 l)))
-(fn (snd l) (eval (nth 1 l)))
-(fn (trd l) (eval (nth 2 l)))
+(fn (fst l) "Return first element of L." (nth 0 l))
+(fn (snd l) "Return second element of L." (nth 1 l))
+(fn (trd l) "Return third element of L." (nth 2 l))
 
 
 ;; Apply Function to List

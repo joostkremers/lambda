@@ -903,15 +903,15 @@ lval* builtin_last(lenv* e, lval* a) {
   /* Type: function */
   /* Format: last <qexpr> */
   /* Description: return last element of <qexpr> */
-  /* Example: init '(1 2 3 4) ==> '(4) */
+  /* Example: init '(1 2 3 4) ==> 4 */
 
   LASSERT_NELIST("last", a);
   LASSERT_NARGS("last", a, 1);
   LASSERT_TYPE("last", a, 0, LVAL_QEXPR);
 
   lval* v = lval_take(a, 0);
-  while (v->count > 1) { lval_del(lval_pop(v, 0)); }
-  return v;
+  int n = v->count-1;
+  return lval_eval(e, lval_take(v, n));
 }
 
 lval* builtin_init(lenv* e, lval* a) {
@@ -1002,8 +1002,8 @@ lval* builtin_nth(lenv* e, lval* a) {
   /* Format: nth <n> <qexpr> */
   /* Description: return nth element of <qexpr>; zero-based */
   /* If n<0, count from end of list */
-  /* nth 2 '(a b c d) ==> '(c) */
-  /* nth -2 '(a b c d) ==> '(c) */
+  /* nth 2 '(1 2 3 4) ==> 3 */
+  /* nth -2 '(1 2 3 4) ==> 3 */
 
   LASSERT_NARGS("nth", a, 2);
   LASSERT_TYPE("nth", a, 0, LVAL_NUM);
@@ -1014,7 +1014,7 @@ lval* builtin_nth(lenv* e, lval* a) {
   LASSERT(a, (0 <= n) && (n < a->cell[1]->count), "nth: argument out of bounds");
 
   lval* v = lval_take(a, 1);
-  lval* r = lval_add(lval_qexpr(), lval_take(v, n));
+  lval* r = lval_eval(e, lval_take(v, n));
   return r;
 }
 
