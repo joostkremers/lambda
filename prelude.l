@@ -63,7 +63,7 @@ Description: Define <sym> as a global variable with value <val>.")
 
 (fn (unpack f l)
     "Format: (unpack func list)
-Description: Unpack the elements of <list> as of arguments to <func>:
+Description: Unpack the elements of <list> as of arguments to <func>.
 Example: (unpack + '(2 3 4)) ==> 9"
     (eval (join (list f) l)))
 
