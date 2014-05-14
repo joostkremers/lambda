@@ -351,11 +351,11 @@ The following functions and macros are defined as built-ins:
         `(input "Hello, what is your name? ") ==> "John"`
 
 - Mathematical and comparison functions
-    - `+`, `-`, `*`, `/`, `pow`, `mod`: standard mathematical operators; all these functions are multivalued
+    - `+ - * / pow mod`: standard mathematical operators; all these functions are multivalued
 
         `(+ 2 3 4) ==> 9`
 
-    - `=`, `/=`, `<`, `>`, `<=`,`>=`: comparison of numbers only; all these functions are multivalued
+    - `= /= < > <= >=`: comparison of numbers only; all these functions are multivalued
 
         `(< 2 3 4) ==> true`
 
@@ -372,7 +372,7 @@ The following functions and macros are defined as built-ins:
         `(null '()) ==> true`
 
 - Logical functions
-    - `and`, `or`, `not`: standard logical operators; `and` and `or` are macros and take multiple arguments,`not` is a function; all three accept only booleans.
+    - `and or not`: standard logical operators; `and` and `or` are macros and take multiple arguments,`not` is a function; all three accept only booleans.
 
 
 ## The prelude ##
