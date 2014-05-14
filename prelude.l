@@ -106,6 +106,17 @@ Description: Return the largest of a series of <num>*."
           (set '(item) (fst xs))
         (if (> item rest) (item) (rest)))))
 
+(fn (odd n)
+    "Format: odd n
+Description: return true if <n> is odd."
+    (/= (mod n 2) 0))
+
+(fn (even n)
+    "Format: even n
+Description: return true if <n> is even."
+    (= (mod n 2) 0))
+
+
 ;;; Conditional Functions
 
 (mac (select & _cs)
