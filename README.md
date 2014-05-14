@@ -167,9 +167,9 @@ Numbers, strings and q-expressions evaluate to themselves. Evaluating a symbol r
 
 When evaluating an s-expression, a few cases are to be considered. Roughly, evaluation proceeds as follows:
 
-- The first element is evaluated. If it is a macro, the other elements are converted into q-expressions.
+- If the list is empty, it is returned as-is, without evaluation.
+- The first element of the list is evaluated. If it evaluates to a macro, the other elements are converted into q-expressions.
 - If the first element does not evaluate to a macro, the other elements of the list are evaluated.
-- If the list is empty, it is returned.
 - If the list contains only one element, this element is returned.
 - If the list contains more than one element, the first element must be a function or a macro, which is then called with the other elements as arguments.
 
