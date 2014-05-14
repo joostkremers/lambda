@@ -35,7 +35,7 @@
 
 ;;; Functional Functions
 
-(def '(fn) (^ '(f | b)
+(def '(fn) (^ '(f & b)
               '(def (head f)
                     (\ (tail f) (last b))
                     (if (= (len b) 2)
@@ -43,7 +43,7 @@
      "Format: (fn (name arg*) [\"doc string\"] (body))
 Description: Define <name> as a global function.")
 
-(def '(mac) (^ '(f | b)
+(def '(mac) (^ '(f & b)
                '(def (head f)
                      (^ (tail f) (last b))
                      (if (= (len b) 2)
@@ -51,7 +51,7 @@ Description: Define <name> as a global function.")
      "Format: (mac (name arg*) [\"doc string\"] (body))
 Description: Define <name> as a global macro.")
 
-(def '(var) (^ '(name val | doc)
+(def '(var) (^ '(name val & doc)
                '(def name val (if (not (null doc))
                                   (eval (nth 0 doc)))))
      "Format: (var sym val [\"doc string\"])
@@ -67,8 +67,8 @@ Description: Unpack the elements of <list> as of arguments to <func>:
 Example: (unpack + '(2 3 4)) ==> 9"
     (eval (join (list f) l)))
 
-(fn (pack f | xs)
-    "Format: (pack func | arg*)
+(fn (pack f & xs)
+    "Format: (pack func & arg*)
 Description: Pack a series of <arg>* into a list and apply <func> to it.
 Example: (pack head 5 6 7) ==> '(5)"
     (f xs))
@@ -76,8 +76,8 @@ Example: (pack head 5 6 7) ==> '(5)"
 (def '(curry) unpack "(curry func list)")
 (def '(uncurry) pack "(uncurry func arg*)")
 
-(fn (do | l)
-    "Format: (do | clause*)
+(fn (do & l)
+    "Format: (do & clause*)
 Description: Evaluate each <clause> in sequence and return the result of
 the last one."
     (if (null l)
@@ -87,8 +87,8 @@ the last one."
 
 ;;; Numeric Functions
 
-(fn (min | xs)
-    "Format: (min | num*)
+(fn (min & xs)
+    "Format: (min & num*)
 Description: Return the smallest of a series of <num>*."
     (if (null (tail xs))
         (fst xs)
@@ -97,8 +97,8 @@ Description: Return the smallest of a series of <num>*."
           (set '(item) (fst xs))
         (if (< item rest) item rest))))
 
-(fn (max | xs)
-    "Format: (max | num*)
+(fn (max & xs)
+    "Format: (max & num*)
 Description: Return the largest of a series of <num>*."
     (if (null (tail xs)) '(fst xs)
       (do
@@ -119,8 +119,8 @@ Description: return true if <n> is even."
 
 ;;; Conditional Functions
 
-(mac (select | _cs)
-     "Format: (select | <clause>*)
+(mac (select & _cs)
+     "Format: (select & <clause>*)
 Description: Each clause is of the form (<expr> <body>), where <expr> is
 evaluated and should return a boolean. For the first <expr> that returns
 true, <body> is evaluated and its result returned."
@@ -130,8 +130,8 @@ true, <body> is evaluated and its result returned."
            (snd (fst _cs))
          (unpack select (tail _cs)))))
 
-(mac (case _x | _cs)
-     "Format: (case <expr> | <clause>*)
+(mac (case _x & _cs)
+     "Format: (case <expr> & <clause>*)
 Description: Evaluate <expr> and choose among <clause>* based on that
 value. Each <clause> is of the form (<val> <body>); <expr> is compared with
 <val> and <body> is evaluated if they are equal."
@@ -151,8 +151,8 @@ value. Each <clause> is of the form (<val> <body>); <expr> is compared with
 Description: Apply <func> with arguments a and b reversed."
     (f b a))
 
-(fn (& f g x)
-    "Format: (& func1 func2 arg)
+(fn ($ f g x)
+    "Format: ($ func1 func2 arg)
 Description: Apply <func2> to <arg> and apply the result to <func1>."
     (f (g x)))
 
@@ -262,8 +262,8 @@ Description: Collect elements from <list> as long as they do not satisfy
 (fn (break f l)
     "Format: (break pred list)
 Description: break <list> at the first item that satisfies <pred>."
-    (list (take-while (& not f) l)
-          (drop-while (& not f) l)))
+    (list (take-while ($ not f) l)
+          (drop-while ($ not f) l)))
 
 (fn (elem x l)
     "Format: (elem e list)
