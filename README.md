@@ -90,7 +90,7 @@ Functions are first-class objects and can be created with the function `\` ("lam
 ```
 lambda> (def '(plus5) (\ '(a) '(+ 5 a)))
 >> ()
- 
+
 lambda> (plus5 7)
 >> 12
 ```
@@ -149,7 +149,7 @@ Immediate evaluation can also apply to variables (symbols):
 
 ```
 (def '(a) '(2 "two"))
-  
+
 (fn (test n)
     (case n
       (1 "one")
@@ -216,21 +216,17 @@ lambda> (doc temp)
 The macros for defining variables (`var`), functions (`fn`), and macros (`mac`) all take an optional doc string. For example, the function `min` from the prelude:
 
 ```
-(fn (min & xs)
-    "Return the smallest of a series of numbers."
-    (if (equal (tail xs) nil)
-        (fst xs)
-      (do
-          (set '(rest) (unpack min (tail xs)))
-          (set '(item) (fst xs))
-        (if (< item rest) item rest))))
+(fn (split n l)
+    "Format: (split n list)
+Split <list> at the <n>th element."
+    (list (take n l) (drop n l)))
 ```
 
 The built-in function `doc` can be used to obtain the doc string:
 
 ```
-lambda> doc min
->> "Return the smallest of a series of numbers."
+lambda> doc split
+>> "Format: (split n list)\nSplit <list> at the <n>th element."
 ```
 
 A better alternative is the macro `describe`, however:
@@ -238,10 +234,8 @@ A better alternative is the macro `describe`, however:
 ```
 lambda> describe split
 
-(split n list)
-
+Format: (split n list)
 Split <list> at the <n>th element.
-
 >> ()
 ```
 
@@ -258,124 +252,124 @@ The following functions and macros are defined as built-ins:
 
 - List functions:
     - `list`: create a list
-    
+
         `(list 1 2 3 4) ==> '(1 2 3 4)`
-        
+
     - `head`: return the first element of a list as a q-expression
-    
+
         `(head '(1 2 3 4)) ==> '(1)`
-        
+
     - `tail`: return the tail of the list
-    
+
         `(tail '(1 2 3 4)) ==> '(2 3 4)`
-        
+
     - `join`: join lists
-    
+
        `(join '(1) '(2) '(3 4)) ==> '(1 2 3 4)`
-       
+
     - `init`: return the list without its last element
-    
+
         `(init '(1 2 3 4)) ==> '(1 2 3)`
-        
+
     - `cons`: combine an element with a list
-    
+
         `(cons 1 '(2 3 4)) ==> '(1 2 3 4)`
-        
+
     - `len`: return the length of the list
-    
+
         `(len '(1 2 3 4)) ==> 4`
-        
+
     - `nth`: return the nth element of a list and evaluate
-    
+
         `nth 0 '(1 2 3 4) ==> 1`
-        
+
     - `last`: return last element of a list and evaluate
-    
+
         `last '(1 2 3 4) ==> 4`
-        
+
     - `eval`: evaluate a q-expression as an s-expression and return the result.
-    
+
         `(eval '(+ 2 5)) ==> 7`
 
 - Variable functions
     - `def`: define a symbol as a global variable
-    
+
         `(def '(a) 1)`
-        
+
         `(def '(temp) 18 "Global temperature")`
-        
+
     - `set`: set a list of symbols as local variables
-    
+
         `(set '(a b) 1 2)`
-        
+
     - `doc`: return the doc string of a symbol
-    
+
         `(doc temp) ==> "Global temperature"`
 
 - General functions
     - `\`: create an anonymous function
-    
+
         `(\ '(a) '(* 2 a))`
-        
+
     - `^`: create an anonymous macro
-    
+
         `(^ '(a) '(list a))`
-        
+
     - `exit`: exit the REPL or program
-    
+
         `(exit 0)`
-        
+
     - `typeof`: return the type of an expression as a string
-    
+
         `(typeof '(a)) ==> "Q-expression"`
-        
+
     - `load`: load a file from disk and evaluate it
-    
+
         `load "test.l"`
-        
+
     - `print`: print an object; return `()`
-    
+
         `print print ==> ()`, displays `<builtin function at 0x14119d0>`
-                
+
         `print fn ==> ()`, displays `(^ '(name val & doc) '(def name val (if (not (null doc)) (eval (nth 0 doc)))))`
-        
+
     - `error`: create an error and return it
-    
+
         `(error "Illegal option") ==> "Error: Illegal option"`
-        
+
     - `puts`: print a string to stdout, return `()`
-    
+
         `(puts "Hello.") ==> ()`, displays `Hello.`
-        
+
     - `read`: read a string as Lambda code and return as q-expression
-    
+
         `read "(+ a b)" ==> '((+ a b))`
-        
+
     - `input`: prompt for input
-    
+
         `(input "Hello, what is your name? ") ==> "John"`
 
 - Mathematical and comparison functions
     - `+`, `-`, `*`, `/`, `pow`, `mod`: standard mathematical operators; all these functions are multivalued
-    
+
         `(+ 2 3 4) ==> 9`
 
     - `=`, `/=`, `<`, `>`, `<=`,`>=`: comparison of numbers only; all these functions are multivalued
-    
+
             `(< 2 3 4) ==> true`
 
     - `if`: conditional execution (macro)
-    
+
             `(if (> 2 1) (list 1 2) (list 2 1)) ==> '(1 2)`
 
     - `equal`: test equality of any two objects
-    
+
             `(equal '(a) '(a)) ==> true`
 
     - `null`: test if argument is the empty list
 
         `(null '()) ==> true`
-        
+
 - Logical functions
     - `and`, `or`, `not`: standard logical operators; `and` and `or` are macros and take multiple arguments,`not` is a function; all three accept only booleans.
 
