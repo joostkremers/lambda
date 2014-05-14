@@ -213,7 +213,7 @@ lambda> (doc temp)
 >> "Global temperature"
 ```
 
-The macros for defining variables (`var`), functions (`fn`), and macros (`mac`) all take an optional doc string. For example, the function `min` from the prelude:
+The macros for defining variables (`var`), functions (`fn`), and macros (`mac`) all take an optional doc string. For example, the function `split` from the prelude:
 
 ```
 (fn (split n l)
