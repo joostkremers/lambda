@@ -122,7 +122,7 @@ An example of a (pre-defined) macro is `case`, which is similar to a `switch` st
       (2 "two")))
 ```
 
-If `case` had been a function, a call to `case`would have to be written as follows:
+If `case` had been a function, a call to `case` would have to be written as follows:
 
 
 ```
