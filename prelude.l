@@ -298,7 +298,7 @@ Example: (zip '(1 2 3) '(4 5 6)) ==> '('(1 4) '(2 5) '(3 6))"
 Description: Unzip a list of pairs into two lists
 Example: (unzip '('(1 4) '(2 5) '(3 6)) ==> '('(1 2 3) '(4 5 6))"
     (if (null l)
-        nil
+        (list nil nil)
       (do
           (set '(x) (fst l))
           (set '(xs) (unzip (tail l)))
