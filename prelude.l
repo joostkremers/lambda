@@ -236,7 +236,7 @@ Description: Drop the first <num> items from <list> and return the rest."
 
 (fn (split n l)
     "Format: (split n list)
-Split <list> at the <n>th element."
+Description: Split <list> at the <n>th element."
     (list (take n l) (drop n l)))
 
 (fn (take-while f l)
