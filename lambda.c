@@ -793,6 +793,7 @@ lval* builtin_if(lenv* e, lval* a) {
   if (a->cell[0]->type == LVAL_ERR) { return lval_take(a, 0); }
 
   if (a->cell[0]->boolean) {
+  if (a->cell[0]->type != LVAL_BOOL) { lval_del(a); return lval_err("if: not a boolean"); }
     result = lval_eval_qexpr(e, lval_pop(a, 1));
   } else {
     if (a->count == 3) {
