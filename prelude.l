@@ -154,14 +154,14 @@ Description: Apply <func2> to <arg> and apply the result to <func1>."
 
 ;;; List Functions
 
-(fn (fst l) "(fst list)
-
-Return and evaluate first element of <list>."
+(fn (fst l)
+    "Format: (fst list)
+Description: Return and evaluate first element of <list>."
     (nth 0 l))
 
-(fn (snd l) "(snd list)
-
-Return and evaluate second element of <list>."
+(fn (snd l)
+    "Format: (snd list)
+Description: Return and evaluate second element of <list>."
     (nth 1 l))
 
 (fn (trd l)
