@@ -357,15 +357,15 @@ The following functions and macros are defined as built-ins:
 
     - `=`, `/=`, `<`, `>`, `<=`,`>=`: comparison of numbers only; all these functions are multivalued
 
-            `(< 2 3 4) ==> true`
+        `(< 2 3 4) ==> true`
 
     - `if`: conditional execution (macro)
 
-            `(if (> 2 1) (list 1 2) (list 2 1)) ==> '(1 2)`
+        `(if (> 2 1) (list 1 2) (list 2 1)) ==> '(1 2)`
 
     - `equal`: test equality of any two objects
 
-            `(equal '(a) '(a)) ==> true`
+        `(equal '(a) '(a)) ==> true`
 
     - `null`: test if argument is the empty list
 
