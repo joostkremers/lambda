@@ -40,20 +40,34 @@
 
 ;;; Code:
 
-(defvar lambda-exec-path "/home/joost/src/lambda/lambda"
+;;; lambda-mode for Lambda source files
+
+(put 'fn 'doc-string-elt 2)
+(put 'mac 'doc-string-elt 2)
+(put 'def 'doc-string-elt 3)
+(put 'var 'doc-string-elt 3)
+
+(define-derived-mode lambda-mode lisp-mode "Λ"
+  "Major mode for editing Lambda source files.
+
+\\<lambda-mode-map>")
+
+;;; Inferior Lambda
+
+(defvar inferior-lambda-exec-path "/home/joost/src/lambda/lambda"
   "Path to the program used by `run-lambda'.")
  
-(defvar lambda-arguments '()
+(defvar inferior-lambda-arguments '()
   "Commandline arguments to pass to `lambda'")
  
-(defvar lambda-mode-map
+(defvar inferior-lambda-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     ;; example definition
     (define-key map "\t" 'completion-at-point)
     map)
   "Basic mode map for `run-lambda'")
  
-(defvar lambda-prompt-regexp "lambda>"
+(defvar inferior-lambda-prompt-regexp "lambda>"
   "Prompt for `run-lambda'.")
 
 (defun run-lambda ()
@@ -74,15 +88,15 @@
              lambda-program lambda-arguments)
       (lambda-mode))))
 
-(defun lambda--initialize ()
-  "Helper function to initialize Lambda"
+(defun inferior-lambda-initialize ()
+  "Helper function to initialize Lambda."
   (setq comint-process-echoes t)
   (setq comint-use-prompt-regexp t))
 
-(define-derived-mode lambda-mode comint-mode "Lambda"
+(define-derived-mode inferior-lambda-mode comint-mode "Lambda"
   "Major mode for `run-lambda'.
 
-\\<lambda-mode-map>"
+\\<inferior-lambda-mode-map>"
   nil "Lambda"
   ;; this sets up the prompt so it matches: lambda>
   (setq comint-prompt-regexp lambda-prompt-regexp)
@@ -95,10 +109,7 @@
   (set (make-local-variable 'paragraph-start) lambda-prompt-regexp))
 
 ;; this has to be done in a hook. grumble grumble.
-(add-hook 'lambda-mode-hook 'lambda--initialize)
-
-;; TODO symbol property doc-string-elt determines which element in a
-;; top-level definition is the doc string.
+(add-hook 'inferior-lambda-mode-hook 'inferior-lambda-initialize)
 
 (provide 'lambda-mode)
 
