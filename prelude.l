@@ -259,6 +259,12 @@ Description: Collect elements from <list> as long as they do not satisfy
         l
       (drop-while f (tail l))))
 
+(fn (break f l)
+    "Format: (break pred list)
+Description: break <list> at the first item that satisfies <pred>."
+    (list (take-while (comp not f) l)
+          (drop-while (comp not f) l)))
+
 (fn (elem x l)
     "Format: (elem e list)
 Description: Return true if <e> is in <list>, false otherwise."
