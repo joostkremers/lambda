@@ -83,8 +83,8 @@ Example: (pack head 5 6 7) ==> '(5)"
     "Format: (do & clause*)
 Description: Evaluate each <clause> in sequence and return the result of
 the last one."
-    (if (equal l nil)
-        (nil)
+    (if (null l)
+        nil
       (last l)))
 
 
