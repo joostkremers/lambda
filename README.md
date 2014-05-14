@@ -236,6 +236,7 @@ lambda> describe split
 
 Format: (split n list)
 Split <list> at the <n>th element.
+
 >> ()
 ```
 
