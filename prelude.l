@@ -35,7 +35,6 @@
 
 ;;; Functional Functions
 
-;; Function definition
 (def '(fn) (^ '(f & b)
               '(def (head f)
                     (\ (tail f) (last b))
@@ -52,7 +51,6 @@ Description: Define <name> as a global function.")
      "Format: (mac (name arg*) [\"doc string\"] (body))
 Description: Define <name> as a global macro.")
 
-;; Variable definition
 (def '(var) (^ '(name val & doc)
                '(def name val (if (not (null doc))
                                   (eval (nth 0 doc)))))
@@ -69,7 +67,6 @@ Description: Unpack the elements of <list> as of arguments to <func>:
 Example: (unpack + '(2 3 4)) ==> 9"
     (eval (join (list f) l)))
 
-;; Unapply List to Function
 (fn (pack f & xs)
     "Format: (pack func & arg*)
 Description: Pack a series of <arg>* into a list and apply <func> to it.
@@ -100,7 +97,6 @@ Description: Return the smallest of a series of <num>*."
           (set '(item) (fst xs))
         (if (< item rest) item rest))))
 
-;; Maximum of Arguments
 (fn (max & xs)
     "Format: (max & num*)
 Description: Return the largest of a series of <num>*."
@@ -200,7 +196,6 @@ starting value."
         z
       (foldl f (f z (fst l)) (tail l))))
 
-;; Fold Right
 (fn (foldr f z l)
     "Format: (foldr func val list)
 Description: Fold <list> from the right using <func> with <val> as the
@@ -219,7 +214,6 @@ Description: Return the sum of the values in <list>."
 Description: Return the product of the values in <list>."
     (foldl * 1 l))
 
-;; Take N items
 (fn (take n l)
     "Format: (take num list)
 Description: Return the first <num> items of <list>."
@@ -274,7 +268,6 @@ first element of <list> where <x> matches <key>."
           (set '(val) (snd (fst l)))
         (if (equal key x) (val) (assoc x (tail l))))))
 
-;; Zip two lists together into a list of pairs
 (fn (zip x y)
     "Format: (zip list1 list2)
 Description: Zip two lists
@@ -283,7 +276,6 @@ Example: (zip '(1 2 3) '(4 5 6)) ==> '('(1 4) '(2 5) '(3 6))"
         nil
       (join (list (join (head x) (head y))) (zip (tail x) (tail y)))))
 
-;; Unzip a list of pairs into two lists
 (fn (unzip l)
     "Format: (unzip list)
 Description: Unzip a list of pairs into two lists
