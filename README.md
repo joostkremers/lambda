@@ -132,7 +132,7 @@ If `case` had been a function, a call to `case`would have to be written as follo
       '(2 "two")))
 ```
 
-That is, each clause would have to be explicitly marked as a q-expression. Note that it is in fact possible to write the call like this, since `case` expects its arguments to be q-expressions. The s-expressions in the first call are converted to q-expressions before being passed to `case`.
+That is, each clause would have to be explicitly marked as a q-expression. Note that it is in fact possible to write the call like this, since `case` expects its arguments to be q-expressions. The s-expressions in the first form are converted to q-expressions before being passed to `case`.
 
 In a macro call, the symbol `!` can be used to force immediate evaluation of the following expression:
 
