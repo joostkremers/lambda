@@ -808,7 +808,7 @@ lval* builtin_if(lenv* e, lval* a) {
 
 lval* builtin_and(lenv* e, lval* a) {
   /* Type: macro */
-  /* Format: and <bool> & <bools> */
+  /* Format: and <bool> | <bools> */
   /* Description: logical 'and' */
 
   lval* result;
@@ -836,7 +836,7 @@ lval* builtin_and(lenv* e, lval* a) {
 
 lval* builtin_or(lenv* e, lval* a) {
   /* Type: macro */
-  /* Format: or <bool> & <bools> */
+  /* Format: or <bool> | <bools> */
   /* Description: logical 'or' */
 
   lval* result;
@@ -937,7 +937,7 @@ lval* builtin_init(lenv* e, lval* a) {
 
 lval* builtin_list(lenv* e, lval* a) {
   /* Type: function */
-  /* Format: list & <expr>* */
+  /* Format: list | <expr>* */
   /* Description: return <expr>* as a list */
   /* Example: list 1 2 3 4 ==> '(1 2 3 4) */
 
@@ -1364,13 +1364,13 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
     /* Pop the first symbol from the formals */
     lval* sym = lval_pop(f->formals, 0);
 
-    /* Special case to deal with & */
-    if (strcmp(sym->sym, "&") == 0) {
+    /* Special case to deal with | */
+    if (strcmp(sym->sym, "|") == 0) {
 
-      /* Ensure & is followed by another symbol */
+      /* Ensure | is followed by another symbol */
       if (f->formals->count != 1) {
         lval_del(a);
-        return lval_err("Invalid function format. Incorrect number of symbols after '&'");
+        return lval_err("Invalid function format. Incorrect number of symbols after '|'");
       }
 
       /* Next formal should be bound to remaining arguments */
@@ -1393,15 +1393,15 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
   /* Argument list is now bound so can be cleaned up */
   lval_del(a);
 
-  /* If & remains in formal list it should be bound to the empty list */
-  if (f->formals->count > 0 && strcmp(f->formals->cell[0]->sym, "&") == 0) {
+  /* If | remains in formal list it should be bound to the empty list */
+  if (f->formals->count > 0 && strcmp(f->formals->cell[0]->sym, "|") == 0) {
 
-    /* Check to ensure that & is not passed invalidly */
+    /* Check to ensure that | is not passed invalidly */
     if (f->formals->count != 2) {
-      return lval_err("Invalid function format. Incorrect number of symbols after '&'");
+      return lval_err("Invalid function format. Incorrect number of symbols after '|'");
     }
 
-    /* Pop and delete & symbol */
+    /* Pop and delete | symbol */
     lval_del(lval_pop(f->formals, 0));
 
     /* Pop next symbol and create empty list */
@@ -1542,7 +1542,7 @@ int main(int argc, char** argv) {
     "                                                                   \
       number  : /-?[0-9]+\\.?[0-9]*/ ;                                  \
       boolean : \"true\" | \"false\" ;                                  \
-      symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>&%$^]+/ | '!' ;              \
+      symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>&%$^]+/ | '!' | '|' ;        \
       string  : /\"(\\\\.|[^\"])*\"/ ;                                  \
       comment : /;[^\\r\\n]*/ ;                                         \
       sexpr   : '(' <expr>* ')' ;                                       \
