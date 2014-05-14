@@ -4,3 +4,4 @@
 /mpc.h
 *.log
 /test.l
+*.elc
