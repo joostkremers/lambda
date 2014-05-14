@@ -93,7 +93,7 @@ the last one."
 (fn (min & xs)
     "Format: (min & num*)
 Description: Return the smallest of a series of <num>*."
-    (if (equal (tail xs) nil)
+    (if (null (tail xs))
         (fst xs)
       (do
           (set '(rest) (unpack min (tail xs)))
@@ -104,7 +104,7 @@ Description: Return the smallest of a series of <num>*."
 (fn (max & xs)
     "Format: (max & num*)
 Description: Return the largest of a series of <num>*."
-    (if (equal (tail xs) nil) '(fst xs)
+    (if (null (tail xs)) '(fst xs)
       (do
           (set '(rest) (unpack max (tail xs)))
           (set '(item) (fst xs))
@@ -117,7 +117,7 @@ Description: Return the largest of a series of <num>*."
 Description: Each clause is of the form (<expr> <body>), where <expr> is
 evaluated and should return a boolean. For the first <expr> that returns
 true, <body> is evaluated and its result returned."
-     (if (equal _cs nil)
+     (if (null _cs)
          (error "No Selection Found")
        (if (fst (fst _cs))
            (snd (fst _cs))
@@ -128,7 +128,7 @@ true, <body> is evaluated and its result returned."
 Description: Evaluate <expr> and choose among <clause>* based on that
 value. Each <clause> is of the form (<val> <body>); <expr> is compared with
 <val> and <body> is evaluated if they are equal."
-     (if (equal _cs nil)
+     (if (null _cs)
          (error "No Case Found")
        (if (equal (eval _x) (fst (fst _cs)))
            (snd (fst _cs))
@@ -170,7 +170,7 @@ Description: Return and evaluate third element of <list>."
     "Format: (map func list)
 Description: Apply <func> to each element in <list> and collect the results
 in a list."
-    (if (equal l nil)
+    (if (null l)
         nil
       (join (list (f (fst l))) (map f (tail l)))))
 
@@ -178,7 +178,7 @@ in a list."
     "Format: (filter pred list)
 Description: Test each element in <list> using <pred> and return a list of
 elements for which <pred> returns true."
-    (if (equal l nil)
+    (if (null l)
         nil
       (join (if (f (fst l))
                 (head l)
@@ -188,7 +188,7 @@ elements for which <pred> returns true."
 (fn (reverse l)
     "Format: (reverse list)
 Description: Reverse <list>."
-    (if (equal l nil)
+    (if (null l)
         nil
       (join (reverse (tail l)) (head l))))
 
@@ -196,7 +196,7 @@ Description: Reverse <list>."
     "Format: (foldl func val list)
 Description: Fold <list> from the left using <func> with <val> as the
 starting value."
-    (if (equal l nil)
+    (if (null l)
         z
       (foldl f (f z (fst l)) (tail l))))
 
@@ -205,7 +205,7 @@ starting value."
     "Format: (foldr func val list)
 Description: Fold <list> from the right using <func> with <val> as the
 starting value."
-    (if (equal l nil)
+    (if (null l)
         z
       (f (fst l) (foldr f z (tail l)))))
 
@@ -257,7 +257,7 @@ Description: Collect elements from <list> as long as they do not satisfy
 (fn (elem x l)
     "Format: (elem e list)
 Description: Return true if <e> is in <list>, false otherwise."
-    (if (equal l nil)
+    (if (null l)
         false
       (if (equal x (fst l))
           true
@@ -267,7 +267,7 @@ Description: Return true if <e> is in <list>, false otherwise."
     "Format: (assoc x list)
 Description: <list> must be a list of (<key> <value>) pairs. Return the
 first element of <list> where <x> matches <key>."
-    (if (equal l nil)
+    (if (null l)
         (error "No Element Found")
       (do
           (set '(key) (fst (fst l)))
@@ -279,7 +279,7 @@ first element of <list> where <x> matches <key>."
     "Format: (zip list1 list2)
 Description: Zip two lists
 Example: (zip '(1 2 3) '(4 5 6)) ==> '('(1 4) '(2 5) '(3 6))"
-    (if (or (equal x nil) (equal y nil))
+    (if (or (null x) (null y))
         nil
       (join (list (join (head x) (head y))) (zip (tail x) (tail y)))))
 
@@ -288,7 +288,7 @@ Example: (zip '(1 2 3) '(4 5 6)) ==> '('(1 4) '(2 5) '(3 6))"
     "Format: (unzip list)
 Description: Unzip a list of pairs into two lists
 Example: (unzip '('(1 4) '(2 5) '(3 6)) ==> '('(1 2 3) '(4 5 6))"
-    (if (equal l nil)
+    (if (null l)
         (list nil nil)
       (do
           (set '(x) (fst l))
