@@ -97,6 +97,9 @@
 ;; this has to be done in a hook. grumble grumble.
 (add-hook 'lambda-mode-hook 'lambda--initialize)
 
+;; TODO symbol property doc-string-elt determines which element in a
+;; top-level definition is the doc string.
+
 (provide 'lambda-mode)
 
 ;;; lambda-mode ends here
