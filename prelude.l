@@ -151,8 +151,8 @@ value. Each <clause> is of the form (<val> <body>); <expr> is compared with
 Description: Apply <func> with arguments a and b reversed."
     (f b a))
 
-(fn (comp f g x)
-    "Format: (comp func1 func2 arg)
+(fn ($ f g x)
+    "Format: ($ func1 func2 arg)
 Description: Apply <func2> to <arg> and apply the result to <func1>."
     (f (g x)))
 
@@ -262,8 +262,8 @@ Description: Collect elements from <list> as long as they do not satisfy
 (fn (break f l)
     "Format: (break pred list)
 Description: break <list> at the first item that satisfies <pred>."
-    (list (take-while (comp not f) l)
-          (drop-while (comp not f) l)))
+    (list (take-while ($ not f) l)
+          (drop-while ($ not f) l)))
 
 (fn (elem x l)
     "Format: (elem e list)

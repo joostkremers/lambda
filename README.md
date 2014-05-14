@@ -53,7 +53,7 @@ Both `<then>` and `<else>` can only be a single clause. The `<else>` clause is o
 
 ## Symbols ##
 
-Symbols can consist of alphanumerical characters and any of the characters `_+-*/\=<>&%^`. A symbol evaluates to a value, which can be any of the built-in types. A symbol can be bound to a function in the same way as to a value. In essence, this means that Lambda is a Lisp-1.
+Symbols can consist of alphanumerical characters and any of the characters `_+-*/\=<>&%$^`. A symbol evaluates to a value, which can be any of the built-in types. A symbol can be bound to a function in the same way as to a value. In essence, this means that Lambda is a Lisp-1.
 
 ## Errors ##
 
