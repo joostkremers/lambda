@@ -42,8 +42,7 @@
                     (if (= (len b) 2)
                         (eval (nth 0 b)))))
      "Format: (fn (name arg*) [\"doc string\"] (body))
-Description: Define <name> as a global function with arguments <arg>*. The
-documenation string is optional.")
+Description: Define <name> as a global function.")
 
 (def '(mac) (^ '(f & b)
                '(def (head f)
@@ -51,16 +50,14 @@ documenation string is optional.")
                      (if (= (len b) 2)
                          (eval (nth 0 b)))))
      "Format: (mac (name arg*) [\"doc string\"] (body))
-Description: Define <name> as a global macro with arguments <arg>*. The
-documenation string is optional.")
+Description: Define <name> as a global macro.")
 
 ;; Variable definition
 (def '(var) (^ '(name val & doc)
                '(def name val (if (not (null doc))
                                   (eval (nth 0 doc)))))
      "Format: (var sym val [\"doc string\"])
-Description: Define <sym> as a global variable with value <val>. The
-documentation string is optional.")
+Description: Define <sym> as a global variable with value <val>.")
 
 ;; Open new scope
 (fn (let b)
@@ -69,14 +66,14 @@ documentation string is optional.")
 (fn (unpack f l)
     "Format: (unpack func list)
 Description: Unpack the elements of <list> as of arguments to <func>:
-(unpack + '(2 3 4)) ==> 9"
+Example: (unpack + '(2 3 4)) ==> 9"
     (eval (join (list f) l)))
 
 ;; Unapply List to Function
 (fn (pack f & xs)
     "Format: (pack func & arg*)
 Description: Pack a series of <arg>* into a list and apply <func> to it.
-(pack head 5 6 7) ==> '(5)"
+Example: (pack head 5 6 7) ==> '(5)"
     (f xs))
 
 (def '(curry) unpack "(curry func list)")
