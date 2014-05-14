@@ -1109,6 +1109,19 @@ lval* builtin_macro(lenv* e, lval* a) {
 lval* builtin_load(lenv* e, lval* a) {
   LASSERT_NARGS("load", a, 1);
   LASSERT_TYPE("load", a, 0, LVAL_STR);
+lval* builtin_quote(lenv* e, lval* a) {
+  LASSERT_NARGS("`", a, 1);
+
+  lval* v = lval_take(a, 0);
+  switch (v->type) {
+  case LVAL_QEXPR: break;
+  case LVAL_SEXPR: v->type = LVAL_QEXPR; break;
+  default: v = lval_add(lval_qexpr(), v);
+  }
+
+  return v;
+}
+
 
   /* Parse file given by string name */
   mpc_result_t r;
@@ -1313,6 +1326,7 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "exit", builtin_exit, NULL);
   lenv_add_builtin(e, "typeof", builtin_typeof, NULL);
   lenv_add_builtin(e, "load", builtin_load, NULL);
+  lenv_add_builtin(e, "`", builtin_quote, NULL);
   lenv_add_builtin(e, "print", builtin_print, NULL);
   lenv_add_builtin(e, "error", builtin_error, NULL);
   lenv_add_builtin(e, "puts", builtin_puts, NULL);
@@ -1542,7 +1556,7 @@ int main(int argc, char** argv) {
     "                                                                   \
       number  : /-?[0-9]+\\.?[0-9]*/ ;                                  \
       boolean : \"true\" | \"false\" ;                                  \
-      symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>&%$^]+/ | '!' ;              \
+      symbol  : /[a-zA-Z0-9_+\\`\\-*\\/\\\\=<>&%$^]+/ | '!' ;           \
       string  : /\"(\\\\.|[^\"])*\"/ ;                                  \
       comment : /;[^\\r\\n]*/ ;                                         \
       sexpr   : '(' <expr>* ')' ;                                       \
