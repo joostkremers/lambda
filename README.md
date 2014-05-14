@@ -285,7 +285,7 @@ The following functions and macros are defined as built-ins:
     
         `(len '(1 2 3 4)) ==> 4`
         
-    - `nth`: return the <n>*th* element of a list and evaluate
+    - `nth`: return the n_th_ element of a list and evaluate
     
         `nth 0 '(1 2 3 4) ==> 1`
         
