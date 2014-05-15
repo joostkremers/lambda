@@ -786,14 +786,14 @@ lval* builtin_if(lenv* e, lval* a) {
 
   LASSERT_VAR_NARGS("if", a, 2, 3);
 
-  lval *result;
-
   /* Evaluate first argument and make sure it's a boolean */
   a->cell[0] = lval_eval_qexpr(e, a->cell[0]);
   if (a->cell[0]->type == LVAL_ERR) { return lval_take(a, 0); }
+  if (a->cell[0]->type != LVAL_BOOL) { lval_del(a); return lval_err("if: not a boolean"); }
+
+  lval *result;
 
   if (a->cell[0]->boolean) {
-  if (a->cell[0]->type != LVAL_BOOL) { lval_del(a); return lval_err("if: not a boolean"); }
     result = lval_eval_qexpr(e, lval_pop(a, 1));
   } else {
     if (a->count == 3) {
@@ -1107,9 +1107,6 @@ lval* builtin_macro(lenv* e, lval* a) {
   return lval_macro(formals, body);
 }
 
-lval* builtin_load(lenv* e, lval* a) {
-  LASSERT_NARGS("load", a, 1);
-  LASSERT_TYPE("load", a, 0, LVAL_STR);
 lval* builtin_quote(lenv* e, lval* a) {
   LASSERT_NARGS("`", a, 1);
 
@@ -1123,6 +1120,9 @@ lval* builtin_quote(lenv* e, lval* a) {
   return v;
 }
 
+lval* builtin_load(lenv* e, lval* a) {
+  LASSERT_NARGS("load", a, 1);
+  LASSERT_TYPE("load", a, 0, LVAL_STR);
 
   /* Parse file given by string name */
   mpc_result_t r;
