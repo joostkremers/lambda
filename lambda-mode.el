@@ -73,7 +73,7 @@
 (defun run-lambda ()
   "Run an inferior instance of `lambda' inside Emacs."
   (interactive)
-  (let ((lambda-program lambda-exec-path)
+  (let ((lambda-program inferior-lambda-exec-path)
         (buffer (comint-check-proc "Lambda")))
     ;; pop to the "*Lambda*" buffer if the process is dead, the
     ;; buffer is missing or it's got the wrong mode.
@@ -85,7 +85,7 @@
     ;; create the comint process if there is no buffer.
     (unless buffer
       (apply 'make-comint-in-buffer "Lambda" buffer
-             lambda-program lambda-arguments)
+             lambda-program inferior-lambda-arguments)
       (lambda-mode))))
 
 (defun inferior-lambda-initialize ()
@@ -99,14 +99,14 @@
 \\<inferior-lambda-mode-map>"
   nil "Lambda"
   ;; this sets up the prompt so it matches: lambda>
-  (setq comint-prompt-regexp lambda-prompt-regexp)
+  (setq comint-prompt-regexp inferior-lambda-prompt-regexp)
   ;; this makes it read only; a contentious subject as some prefer the
   ;; buffer to be overwritable.
   (setq comint-prompt-read-only t)
   ;; this makes it so commands like M-{ and M-} work.
   (set (make-local-variable 'paragraph-separate) "\\'")
   ;; (set (make-local-variable 'font-lock-defaults) '(lambda-font-lock-keywords t))
-  (set (make-local-variable 'paragraph-start) lambda-prompt-regexp))
+  (set (make-local-variable 'paragraph-start) inferior-lambda-prompt-regexp))
 
 ;; this has to be done in a hook. grumble grumble.
 (add-hook 'inferior-lambda-mode-hook 'inferior-lambda-initialize)
