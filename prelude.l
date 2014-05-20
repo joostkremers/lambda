@@ -1,17 +1,17 @@
 ;;; Lambda Standard Prelude
 ;;; =======================
-;;; 
+;;;
 ;;; Based on the book "Build Your Own Lisp" by Daniel Holden
-;;; 
+;;;
 ;;; http://www.buildyourownlisp.com/
-;;; 
+;;;
 ;;; Copyright (c) 2014 Daniel Holden
 ;;; Copyright (c) 2014 Joost Kremers
-;;; 
+;;;
 ;;; Redistribution and use in source and binary forms, with or without
 ;;; modification, are permitted provided that the following conditions
 ;;; are met:
-;;; 
+;;;
 ;;; 1. Redistributions of source code must retain the above copyright
 ;;;    notice, this list of conditions and the following disclaimer.
 ;;; 2. Redistributions in binary form must reproduce the above copyright
@@ -19,7 +19,7 @@
 ;;;    documentation and/or other materials provided with the distribution.
 ;;; 3. The name of the author may not be used to endorse or promote products
 ;;;    derived from this software without specific prior written permission.
-;;; 
+;;;
 ;;; THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 ;;; IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 ;;; OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -88,18 +88,18 @@ the last one."
 Description: Return the smallest of a series of <num>*."
     (if (null (tail xs))
         (fst xs)
-      (do
-          (set '(rest) (unpack min (tail xs)))
-          (set '(item) (fst xs))
+      (let
+          ((rest (unpack min (tail xs)))
+           (item (fst xs)))
         (if (< item rest) item rest))))
 
 (fn (max & xs)
     "Format: (max & num*)
 Description: Return the largest of a series of <num>*."
     (if (null (tail xs)) '(fst xs)
-      (do
-          (set '(rest) (unpack max (tail xs)))
-          (set '(item) (fst xs))
+      (let
+          ((rest (unpack max (tail xs)))
+           (item (fst xs)))
         (if (> item rest) (item) (rest)))))
 
 (fn (odd n)
@@ -276,9 +276,9 @@ Description: <list> must be a list of (<key> <value>) pairs. Return the
 first element of <list> where <x> matches <key>."
     (if (null l)
         (error "No Element Found")
-      (do
-          (set '(key) (fst (fst l)))
-          (set '(val) (snd (fst l)))
+      (let
+          ((key (fst (fst l)))
+           (val (snd (fst l))))
         (if (equal key x) (val) (assoc x (tail l))))))
 
 (fn (zip x y)
@@ -295,9 +295,8 @@ Description: Unzip a list of pairs into two lists
 Example: (unzip '('(1 4) '(2 5) '(3 6)) ==> '('(1 2 3) '(4 5 6))"
     (if (null l)
         (list nil nil)
-      (do
-          (set '(x) (fst l))
-          (set '(xs) (unzip (tail l)))
+      (let ((x (fst l))
+            (xs (unzip (tail l))))
         (list (join (head x) (fst xs)) (join (tail x) (snd xs))))))
 
 (mac (describe f)
