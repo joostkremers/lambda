@@ -224,6 +224,44 @@ lambda> (eval (list))
 Strictly speaking, functions that take no arguments are not functions at all, so this state of affairs makes sense.
 
 
+## Partial evaluation ##
+
+If a user-defined function is called with fewer arguments than are required by its argument list, the arguments that are present are evaluated and the function call returns another (anonymous) function with a reduced argument list. Suppose we define a function `add` that adds two numbers:
+
+```
+(fn (add x y)
+    (+ x y))
+```
+
+We can now call this function with only one argument, which will return an anonymous function:
+
+```
+lambda> (add 5)
+>> <user defined function at 0x2376920>
+```
+
+To show the function definition, we can use `print`:
+
+```
+lambda> (print (add 5))
+(\ '(y) '(+ x y))
+>> ()
+```
+
+By using `def`, we can assign this function to a symbol. Note that we use `def` rather than `fn` because the body of the function needs to be evaluated before it is assigned:
+
+```
+(def '(addfive) (add 5))
+```
+
+We now have a function that adds the number 5 to its argument:
+
+```
+lambda> (addfive 7)
+>> 12
+```
+
+
 ## Doc strings ##
 
 The function `def` defines a symbol as a variable in the global name space. You can optionally pass a string to `def`, which will be stored as the documentation string for the symbol:
@@ -256,7 +294,7 @@ lambda> doc split
 >> "Format: (split n list)\nSplit <list> at the <n>th element."
 ```
 
-A better alternative is the macro `describe`, however:
+If you just want to read the doc string, a better alternative is the macro `describe`:
 
 ```
 lambda> describe split
