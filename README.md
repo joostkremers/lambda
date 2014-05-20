@@ -349,7 +349,7 @@ The following functions and macros are defined as built-ins:
 
         `(^ '(a) '(list a))`
 
-    - `exit`: exit the REPL or program
+    - `exit`: exit the REPL or program and return a value to the calling environment.
 
         `(exit 0)`
 
