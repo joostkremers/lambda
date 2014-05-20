@@ -1107,6 +1107,57 @@ lval* builtin_macro(lenv* e, lval* a) {
   return lval_macro(formals, body);
 }
 
+lval* builtin_let(lenv* e, lval* a) {
+  LASSERT_NARGS("let", a, 2);
+  LASSERT_TYPE("let", a, 0, LVAL_QEXPR);
+  LASSERT_TYPE("let", a, 1, LVAL_QEXPR);
+
+  /* Go through the variable list and see if we're defining only symbols */
+  for (int i = 0; i < a->cell[0]->count; i++) {
+    LASSERT(a, (a->cell[0]->cell[i]->type == LVAL_SEXPR || a->cell[0]->cell[i]->type == LVAL_QEXPR),
+            "let: incorrect variable definition. Element %i is not a list", i);
+    LASSERT(a, (a->cell[0]->cell[i]->count == 2),
+            "let: incorrect variable definition. Element %i should be of the form (symbol value)", i);
+    LASSERT(a, (a->cell[0]->cell[i]->cell[0]->type == LVAL_SYM), "let: cannot define non-symbol (element %i)", i);
+  }
+
+  /* Separate the variable list and the body */
+  lval* vars = lval_pop(a, 0);
+  lval* body = lval_take(a, 0);
+
+  /* Create a local environment */
+  lenv* local_env = lenv_new();
+
+  while (vars->count) {
+    /* Take the first variable definition and separate symbol and value */
+    lval* var = lval_pop(vars, 0);
+    lval* sym = lval_pop(var, 0);
+    lval* val = lval_take(var, 0);
+
+    /* Evaluate the value */
+    val = lval_eval(e, val);
+    if (val->type == LVAL_ERR) {
+      lval_del(vars); lval_del(body); lenv_del(local_env); lval_del(sym); return val;
+    }
+
+    /* Put the binding in the local environment */
+    lenv_put(local_env, sym, val, NULL);
+  }
+
+  /* We don't need the variables list anymore */
+  lval_del(vars);
+
+  /* Set the local environment's parent */
+  local_env->par = e;
+
+  /* Evaluate the body of the let */
+  lval* result = lval_eval_qexpr(local_env, body);
+
+  /* Clean up and return */
+  lenv_del(local_env);
+  return result;
+}
+
 lval* builtin_quote(lenv* e, lval* a) {
   LASSERT_NARGS("`", a, 1);
 
@@ -1324,6 +1375,7 @@ void lenv_add_builtins(lenv* e) {
   /* General functions */
   lenv_add_builtin(e, "\\", builtin_lambda, NULL);
   lenv_add_builtin(e, "^", builtin_macro, NULL);
+  lenv_add_builtin_mac(e, "let", builtin_let, NULL);
   lenv_add_builtin(e, "exit", builtin_exit, NULL);
   lenv_add_builtin(e, "typeof", builtin_typeof, NULL);
   lenv_add_builtin(e, "load", builtin_load, NULL);

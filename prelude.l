@@ -57,10 +57,6 @@ Description: Define <name> as a global macro.")
      "Format: (var sym val [\"doc string\"])
 Description: Define <sym> as a global variable with value <val>.")
 
-;; Open new scope
-(fn (let b)
-    (((\ '(_) b) ())))
-
 (fn (unpack f l)
     "Format: (unpack func list)
 Description: Unpack the elements of <list> as of arguments to <func>.
