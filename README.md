@@ -333,8 +333,8 @@ The following functions and macros are defined as built-ins:
     - `let`: create local variable bindings
 
             (let ((x 10)
-                     (y 20))
-                 (+ x y))
+                  (y 20))
+                (+ x y))
 
     - `doc`: return the doc string of a symbol
 
