@@ -66,26 +66,26 @@ An s-expression is a list and is delimited by parentheses, just as in convention
 
 A q-expression is also a list, but unlike s-expressions, a q-expression is not evaluated, (more precisely: evaluates to itself), except when passed to the function `eval`. A q-expression is written as `'(...)`, i.e., an s-expression preceded by a single quote. Unlike conventional Lisps, this quote is *not* an abbreviation for a function `quote`, it is part of the syntax for q-expressions.
 
-Q-expressions have the same function as macros in conventional Lisps: they delay evaluation. Unlike macros, however, evaluation of a q-expression is not delayed because the first element of the list is a special type of element, but because the list itself is special. With q-expressions, functions can be used to perform the functions that macros perform in conventional Lisps:
+Q-expressions have the same function as macros in conventional Lisps: they delay evaluation. Unlike macros, however, evaluation of a q-expression is not delayed because the first element of the list is a special type of element, but because the list itself is special. With q-expressions, functions can be used to perform the tasks that macros perform in conventional Lisps:
 
 ```
-(def '(a b) 1 2)
+(def '(a) 1)
 ```
 
-`def` is a normal function, but is used here to define the symbols `a` and `b` as variables with the values `1` and `2`. Because `'(a b)` is a q-expression, `def` can manipulate the symbols `a` and `b`. Interestingly, the first argument to `def` does not have to be a q-expression. It can also be another type of expression, which must then evaluate to a q-expression. For example:
+`def` is a normal function, but is used here to define the symbol `a` as a variable with the value `1`. Because `'(a)` is a q-expression, `def` can manipulate the symbol `a`. Interestingly, the first argument to `def` does not have to be a q-expression. It can also be another type of expression, which must then evaluate to a q-expression. For example:
 
 ```
-(def (join '(a) '(b)) 1 2)
+(def (head '(a b)) 1)
 ```
 
-The function `join` takes two q-expressions and combines them into a single q-expression: `(join '(a) '(b)) ==> '(a b)`. This list is of the right type for `def`, so that the symbols `a` and `b` are defined as variables with the values `1` and `2`.
+The function `head` takes a q-expression and returns its first element as a q-expression: `(head '(a b)) ==> '(a)`. This list is of the right type for `def`, so that the symbol `a` is defined as a variable with the value `1`.
 
-Note that most (though not all) list handling functions in Lambda take q-expressions as arguments and return q-expressions: `(head '(a b c)) ==> '(a)`.
+Note that the distinction between s-expressions and q-expressions makes it necessary to distinguish between two kinds of list handling functions: those that return a q-expression and those that return an *evaluated* a  q-expression. `head` is of the first type: `(head '(a b c)) ==> '(a)`, while `fst` is of the second type: `(fst '(1 2 3)) ==> 1`, where `1` is the result of evaluating `(1)`. That is, `(fst '(a b c))` will return an error unless `a` happens to be a variable that is bound to some value, in which case that value is returned.
 
 
 ## Functions and macros ##
 
-Functions are first-class objects and can be created with the function `\` ("lambda"). `\` takes two arguments, a list of variables and a body. Both have to be q-expressions. Using `def`, they can be assigned to a variable which can then be used as a function in the traditional manner:
+Functions are first-class objects and can be created with the function `\` ("lambda"). `\` takes two arguments, a list of variables and a body. Both have to be or evaluate to q-expressions. Using `def`, they can be assigned to a variable which can then be used as a function in the traditional manner:
 
 ```
 lambda> (def '(plus5) (\ '(a) '(+ 5 a)))
@@ -101,7 +101,7 @@ However, there is a more convenient way to define functions:
 (fn (plus5 a) (+ 5 a))
 ```
 
-`fn` does not require q-expressions, because it is a macro. Although Lambda has q-expressions and doesn't really need macros, there is nonetheless a built-in macro type, primarily for cosmetic reasons: all those single quotes are not very pretty. Macros in Lambda behave slightly differently from conventional Lisps, however: a macro is a kind of function whose arguments are converted into q-expressions before it is called. Because it's a function, it returns a value, not code. (Although the value it returns can be a q-expression.)
+`fn` does not require q-expressions, because it is a macro. Although Lambda has q-expressions and doesn't really need macros, there is nonetheless a built-in macro type, primarily for cosmetic reasons: all those single quotes are not very pretty. Macros in Lambda behave slightly differently from conventional Lisps, however: a macro is a kind of function(!) whose arguments are converted into q-expressions *before* it is called. Because it's a function, it returns a value, not code. (Although the value it returns can be a q-expression, of course.)
 
 The conversion to q-expressions is done according to the following rules:
 
@@ -159,6 +159,33 @@ Immediate evaluation can also apply to variables (symbols):
 Here, the variable `a` is evaluated before `case` is called.
 
 Macros are susceptible to variable capture, for which there is currently no decent solution.
+
+
+## Variables and environments ##
+
+A variable is a symbol-value binding in a specific environment. There are two types of environment: the global environment, of which there is only one, and local environments. Each function definition creates a local environment, and the built-in macro `let` can be used to create a local environment within a function. Each local environment has the enclosing environment as its parent, and variable bindings not in the local environment are automatically searched in the parent environment, until the global environment is reached. That is, all variables are dynamic.
+
+`def` creates a variable binding in the global environment. It is also possible to create a binding in the current local environment by using `set`. The syntax of `set` differs from that of `def`, especially because it can be used to create multiple bindings at once:
+
+```
+(set '(a b) 1 2)
+```
+
+This binds the symbols `a` and `b` to the values `1` and `2`, respectively, in the local environment.
+
+A more convenient way of creating a global variable binding is the macro `var`, which is essentially just a `def` in disguise:
+
+```
+(var a 4)
+```
+
+This defines `a` as a variable with the value `4`. Note that the variable name does not have to be wrapped in a q-expression, unlike with `def`, but just like `def`, the value assigned to it is evaluated:
+
+```
+(var maxbyte (pow 2 8))
+```
+
+This binds the value `256` to the symbol `maxbyte`, not the list `'(pow 2 8)`.
 
 
 ## Evaluation ##
@@ -303,9 +330,17 @@ The following functions and macros are defined as built-ins:
 
         `(set '(a b) 1 2)`
 
+    - `let`: create local variable bindings
+
+        ```
+        (let ((x 10)
+                 (y 20))
+             (+ x y))
+         ``` 
+
     - `doc`: return the doc string of a symbol
 
-        `(doc temp) ==> "Global temperature"`
+            `(doc temp) ==> "Global temperature"`
 
 - General functions
     - `\`: create an anonymous function
