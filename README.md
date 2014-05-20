@@ -287,16 +287,12 @@ Split <list> at the <n>th element."
     (list (take n l) (drop n l)))
 ```
 
-The built-in function `doc` can be used to obtain the doc string:
+If you just want to read the doc string, `doc` is not a good option, because it returns the doc string as a string. A better alternative is the macro `describe`. Compare:
 
 ```
 lambda> doc split
 >> "Format: (split n list)\nSplit <list> at the <n>th element."
-```
 
-If you just want to read the doc string, a better alternative is the macro `describe`:
-
-```
 lambda> describe split
 
 Format: (split n list)
