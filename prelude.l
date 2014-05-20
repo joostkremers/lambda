@@ -52,8 +52,8 @@ Description: Define <name> as a global function.")
 Description: Define <name> as a global macro.")
 
 (def '(var) (^ '(name val & doc)
-               '(def name val (if (not (null doc))
-                                  (eval (nth 0 doc)))))
+               '(def name (eval val) (if (not (null doc))
+                                         (eval (nth 0 doc)))))
      "Format: (var sym val [\"doc string\"])
 Description: Define <sym> as a global variable with value <val>.")
 
