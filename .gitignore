@@ -5,3 +5,4 @@
 *.log
 /test.l
 *.elc
+*.text
